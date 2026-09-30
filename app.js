@@ -343,6 +343,17 @@ const changeNewPass = document.getElementById('change-new-pass');
 const changeConfirmPass = document.getElementById('change-confirm-pass');
 const changePassAlert = document.getElementById('change-pass-alert');
 
+// Reset Password Modal DOM
+const resetPassModal = document.getElementById('reset-pass-modal');
+const btnCloseResetModal = document.getElementById('btn-close-reset-modal');
+const btnCancelResetModal = document.getElementById('btn-cancel-reset-modal');
+const resetPassForm = document.getElementById('reset-pass-form');
+const resetPassUsername = document.getElementById('reset-pass-username');
+const resetPassTargetUser = document.getElementById('reset-pass-target-user');
+const resetNewPass = document.getElementById('reset-new-pass');
+const resetConfirmPass = document.getElementById('reset-confirm-pass');
+const resetPassAlert = document.getElementById('reset-pass-alert');
+
 // ==================== AUTH ====================
 function initAuth() {
   loadState();
@@ -670,18 +681,7 @@ window.deleteUser = function(username) {
 };
 
 window.resetUserPassword = function(username) {
-  const newPass = prompt(`Enter new password for storekeeper "${username}" (minimum 4 characters):`);
-  if (newPass === null) return;
-  if (newPass.trim().length < 4) {
-    alert('Password must be at least 4 characters long.');
-    return;
-  }
-  const u = state.users.find(user => user.username === username);
-  if (u) {
-    u.password = newPass.trim();
-    saveState();
-    alert(`Password for "${username}" has been successfully updated.`);
-  }
+  openResetPassModal(username);
 };
 
 // ==================== INVENTORY ====================
@@ -1519,6 +1519,75 @@ if (changePassForm) {
     showMsg(changePassAlert, 'Password updated successfully!', true);
     setTimeout(() => {
       closeChangePassPanel();
+    }, 1200);
+  });
+}
+
+// ==================== RESET PASSWORD MODAL (ADMIN) ====================
+function openResetPassModal(username) {
+  if (!resetPassModal) return;
+  resetPassUsername.value = username;
+  resetPassTargetUser.textContent = username;
+  if (resetPassForm) resetPassForm.reset();
+  if (resetPassAlert) resetPassAlert.classList.add('d-none');
+  resetPassModal.classList.remove('d-none');
+  setTimeout(() => resetNewPass?.focus(), 50);
+}
+
+function closeResetPassModal() {
+  if (resetPassModal) {
+    resetPassModal.classList.add('d-none');
+    if (resetPassForm) resetPassForm.reset();
+  }
+}
+
+if (btnCloseResetModal) btnCloseResetModal.addEventListener('click', closeResetPassModal);
+if (btnCancelResetModal) btnCancelResetModal.addEventListener('click', closeResetPassModal);
+
+if (resetPassModal) {
+  resetPassModal.addEventListener('click', (e) => {
+    if (e.target === resetPassModal) {
+      closeResetPassModal();
+    }
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (resetPassModal && !resetPassModal.classList.contains('d-none')) {
+      closeResetPassModal();
+    }
+  }
+});
+
+if (resetPassForm) {
+  resetPassForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = resetPassUsername.value;
+    const newP = resetNewPass.value;
+    const confirmP = resetConfirmPass.value;
+
+    if (!newP || newP.length < 4) {
+      showMsg(resetPassAlert, 'New password must be at least 4 characters.');
+      return;
+    }
+    if (newP !== confirmP) {
+      showMsg(resetPassAlert, 'Passwords do not match.');
+      return;
+    }
+
+    const u = state.users.find(user => user.username === username);
+    if (!u) {
+      showMsg(resetPassAlert, 'Storekeeper account not found.');
+      return;
+    }
+
+    u.password = newP;
+    saveState();
+
+    showMsg(resetPassAlert, `Password for "${username}" updated successfully!`, true);
+    setTimeout(() => {
+      closeResetPassModal();
     }, 1200);
   });
 }
