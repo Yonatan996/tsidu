@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tsidu Inventory – Cloud & Glass Management</title>
+  <meta name="description" content="Tsidu Store Inventory: stock, dispatch, returns & payment tracking with Google Sheets storage.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- AUTH SECTION -->
+<div id="auth-section" class="auth-wrapper">
+  <div id="setup-card" class="auth-card d-none">
+    <div class="auth-logo">
+      <div class="logo-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      </div>
+      <h1>Tsidu Inventory</h1>
+      <p>Create your Owner account to get started</p>
+    </div>
+    <div id="setup-alert" class="alert alert-danger d-none"></div>
+    <form id="setup-form" onsubmit="event.preventDefault()">
+      <div class="form-group">
+        <label for="setup-username">Username</label>
+        <input type="text" id="setup-username" class="input-control" required placeholder="e.g. admin">
+      </div>
+      <div class="form-group">
+        <label for="setup-password">Password</label>
+        <input type="password" id="setup-password" class="input-control" required placeholder="Min 4 characters">
+      </div>
+      <div class="form-group">
+        <label for="setup-confirm-password">Confirm Password</label>
+        <input type="password" id="setup-confirm-password" class="input-control" required placeholder="Re-type password">
+      </div>
+      <button type="submit" id="btn-create-account" class="btn btn-primary btn-block">Create Account & Sign In</button>
+    </form>
+  </div>
+
+  <div id="login-card" class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      </div>
+      <h1>Tsidu Inventory</h1>
+      <p>Sign in to your Tsidu account</p>
+    </div>
+    <div id="login-alert" class="alert alert-danger d-none"></div>
+    <form id="login-form" onsubmit="event.preventDefault()">
+      <div class="form-group">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" class="input-control" required placeholder="Enter username">
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" class="input-control" required placeholder="Enter password">
+      </div>
+      <button type="submit" id="btn-login" class="btn btn-primary btn-block">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<!-- DASHBOARD SECTION -->
+<div id="dashboard-section" class="d-none">
+  <header>
+    <div class="header-container">
+      <a href="#" class="logo">
+        <div class="logo-badge">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        </div>
+        Tsidu Inventory
+      </a>
+      <div class="user-nav">
+        <!-- Google Sheets Cloud Sync Status -->
+        <div class="header-sheets-badge" id="header-sheets-badge" title="Google Sheets Storage Status">
+          <span class="status-dot" id="sheets-status-dot"></span>
+          <span id="sheets-status-text">Sheets: Local</span>
+        </div>
+        <button id="btn-sync-now" class="btn btn-glass btn-sm d-none" title="Sync now with Google Sheets">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+        </button>
+        <button id="btn-theme-toggle" class="btn btn-glass btn-sm" title="Toggle Light/Dark Mode" style="font-size:1rem;padding:5px 10px;">☀️</button>
+        <select id="header-store-select" class="input-control d-none" style="width:auto; padding:4px 10px; font-size:0.85rem; height:32px;"></select>
+        <span id="display-user" class="username-display"></span>
+        <button id="btn-logout" class="btn btn-glass btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <nav class="tabs-bar">
+      <button class="tab-btn active" data-tab="overview">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Overview
+      </button>
+      <button class="tab-btn" data-tab="inventory">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        Stock
+      </button>
+      <button class="tab-btn" data-tab="drivers">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Drivers
+      </button>
+      <button class="tab-btn keeper-only" data-tab="dispatch">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Dispatch
+      </button>
+      <button class="tab-btn keeper-only" data-tab="returns">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+        Returns
+      </button>
+      <button class="tab-btn" data-tab="payments">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Payments
+      </button>
+      <button class="tab-btn" data-tab="history">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Reports
+      </button>
+      <button class="tab-btn d-none" data-tab="admin" id="tab-admin-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Admin (Owner)
+      </button>
+    </nav>
+
+    <div id="tab-contents">
+
+      <!-- TAB: OVERVIEW -->
+      <div id="tab-overview" class="tab-pane fade-in">
+        <div class="metrics-row">
+          <div class="metric-card accent">
+            <div class="metric-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+            <span class="metric-label">Total Revenue</span>
+            <span class="metric-value" id="ov-revenue">ETB 0.00</span>
+          </div>
+          <div class="metric-card success">
+            <div class="metric-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+            <span class="metric-label">Completed Trips</span>
+            <span class="metric-value" id="ov-completed">0</span>
+          </div>
+          <div class="metric-card warning">
+            <div class="metric-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+            <span class="metric-label">Active Dispatches</span>
+            <span class="metric-value" id="ov-active">0</span>
+          </div>
+          <div class="metric-card info">
+            <div class="metric-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+            <span class="metric-label">Products in Stock</span>
+            <span class="metric-value" id="ov-products">0</span>
+          </div>
+          <div class="metric-card danger">
+            <div class="metric-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <span class="metric-label">Low Stock Items</span>
+            <span class="metric-value" id="ov-lowstock">0</span>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="card-title">Recent Trip Activity</h2>
+          <div class="table-responsive">
+            <table>
+              <thead><tr><th>Date</th><th>Driver</th><th>Items Dispatched</th><th class="text-right">Revenue (ETB)</th><th>Status</th></tr></thead>
+              <tbody id="overview-recent-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: STOCK -->
+      <div id="tab-inventory" class="tab-pane fade-in d-none">
+        <div class="dashboard-grid two-col">
+          <div class="keeper-only">
+            <div class="card">
+              <h2 class="card-title" id="product-form-title">Add New Product</h2>
+              <form id="product-form" onsubmit="event.preventDefault()">
+                <input type="hidden" id="product-id">
+                <div class="form-group">
+                  <label for="product-name">Product Name</label>
+                  <input type="text" id="product-name" class="input-control" required placeholder="e.g. Special White Bread">
+                </div>
+                <div class="form-group">
+                  <label for="product-sku">
+                    SKU / Code
+                    <button type="button" id="btn-auto-sku" class="btn btn-glass btn-xs" title="Auto-generate SKU from name">⚡ Auto SKU</button>
+                  </label>
+                  <input type="text" id="product-sku" class="input-control" required placeholder="e.g. SWB-001">
+                </div>
+                <div class="form-group">
+                  <label for="product-stock">Stock Quantity</label>
+                  <input type="number" id="product-stock" class="input-control" required min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label for="product-price">Unit Price (ETB)</label>
+                  <input type="number" id="product-price" class="input-control" required min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div class="flex gap-2">
+                  <button type="submit" id="btn-save-product" class="btn btn-primary" style="flex:1">Save Product</button>
+                  <button type="button" id="btn-cancel-edit" class="btn btn-secondary d-none">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+          <div>
+            <div id="inventory-alert-container"></div>
+            <div class="card">
+              <div class="flex justify-between align-center" style="margin-bottom:16px;">
+                <h2 class="card-title" style="margin-bottom:0">Store Stock Levels</h2>
+                <input type="search" id="inventory-search" class="input-control input-sm search-glass" style="max-width:220px;" placeholder="🔍 Search stock...">
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead><tr><th>SKU</th><th>Product Name</th><th class="text-right">Price (ETB)</th><th class="text-right">Stock</th><th>Status</th><th class="text-center keeper-only">Actions</th></tr></thead>
+                  <tbody id="inventory-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: DRIVERS -->
+      <div id="tab-drivers" class="tab-pane fade-in d-none">
+        <div class="dashboard-grid two-col">
+          <div class="keeper-only">
+            <div class="card">
+              <h2 class="card-title">Register Driver</h2>
+              <form id="driver-form" onsubmit="event.preventDefault()">
+                <div class="form-group">
+                  <label for="driver-name">Full Name</label>
+                  <input type="text" id="driver-name" class="input-control" required placeholder="e.g. Abebe Bekele">
+                </div>
+                <div class="form-group">
+                  <label for="driver-phone">Phone / Contact <span class="text-secondary" style="font-size:0.75rem">(auto-formatted)</span></label>
+                  <input type="text" id="driver-phone" class="input-control" placeholder="09xx-xxx-xxx">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Add Driver</button>
+              </form>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="flex justify-between align-center" style="margin-bottom:16px;">
+                <h2 class="card-title" style="margin-bottom:0">Driver Fleet</h2>
+                <input type="search" id="driver-search" class="input-control input-sm search-glass" style="max-width:220px;" placeholder="🔍 Search drivers...">
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Status</th><th class="text-center keeper-only">Actions</th></tr></thead>
+                  <tbody id="drivers-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: DISPATCH -->
+      <div id="tab-dispatch" class="tab-pane fade-in d-none">
+        <div class="card">
+          <h2 class="card-title">Morning Dispatch Form</h2>
+          <div id="dispatch-alert" class="alert alert-danger d-none"></div>
+          <form id="dispatch-form" onsubmit="event.preventDefault()">
+            <div class="dashboard-grid two-col" style="margin-bottom:20px">
+              <div class="form-group">
+                <label for="dispatch-driver">Select Driver</label>
+                <select id="dispatch-driver" class="input-control" required><option value="">-- Select a Driver --</option></select>
+              </div>
+              <div class="form-group">
+                <label for="dispatch-date">Date <span class="text-secondary" style="font-size:0.75rem">(auto-today)</span></label>
+                <input type="date" id="dispatch-date" class="input-control" required>
+              </div>
+            </div>
+            <div class="dashed-card">
+              <div class="flex justify-between align-center" style="margin-bottom:12px;">
+                <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-secondary)">Products to Dispatch</h3>
+                <div class="quick-actions-bar" style="margin-bottom:0;">
+                  <button type="button" class="btn btn-glass btn-xs" id="btn-dispatch-fill-max">⚡ Fill Max Stock</button>
+                  <button type="button" class="btn btn-glass btn-xs" id="btn-dispatch-clear">✕ Clear All</button>
+                </div>
+              </div>
+              <div class="dispatch-list-header"><div>Product (Available Stock)</div><div>Unit Price</div><div class="text-right">Qty</div></div>
+              <div id="dispatch-products-list"></div>
+            </div>
+            <div class="flex justify-between align-center flex-wrap gap-2">
+              <div class="flex gap-3 align-center">
+                <span class="text-secondary" id="dispatch-total-items" style="font-size:0.9rem;font-weight:600">Total: 0 items</span>
+                <span style="color:var(--border)">|</span>
+                <span class="text-accent" id="dispatch-total-value" style="font-size:0.9rem;font-weight:700">Value: ETB 0.00</span>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Confirm Dispatch
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- TAB: RETURNS -->
+      <div id="tab-returns" class="tab-pane fade-in d-none">
+        <div class="dashboard-grid two-col">
+          <div>
+            <div class="card">
+              <h2 class="card-title">Active Trips</h2>
+              <div id="active-trips-list"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card" id="returns-processing-card">
+              <h2 class="card-title">Evening Return & Sales</h2>
+              <div id="returns-fallback" class="empty-state">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+                <p>Select an active trip from the left to record returns & sales.</p>
+              </div>
+              <form id="returns-form" class="d-none" onsubmit="event.preventDefault()">
+                <input type="hidden" id="return-trip-id">
+                <div class="flex justify-between align-center" style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+                  <div>
+                    <h3 id="return-driver-name" style="font-size:1.05rem;font-weight:700"></h3>
+                    <span id="return-trip-date" class="text-secondary" style="font-size:0.82rem"></span>
+                  </div>
+                  <div class="flex gap-2">
+                    <span class="badge badge-warning">Active Trip</span>
+                  </div>
+                </div>
+                
+                <!-- Quick Automation for Returns -->
+                <div class="quick-actions-bar">
+                  <span style="font-size:0.75rem; color:var(--text-muted); margin-right:auto;">One-click presets:</span>
+                  <button type="button" class="btn btn-glass btn-xs" id="btn-return-all-sold">⚡ Mark All Sold</button>
+                  <button type="button" class="btn btn-glass btn-xs" id="btn-return-all-returned">↩ Mark All Returned</button>
+                </div>
+
+                <div id="returns-alert" class="alert alert-danger d-none"></div>
+                <div class="returns-list-header"><div>Product</div><div class="text-center">Dispatched</div><div class="text-center">Sold</div><div class="text-center">Returned</div></div>
+                <div id="returns-items-list" style="margin-bottom:16px"></div>
+                <div class="revenue-bar">
+                  <div>
+                    <span style="font-size:0.8rem;color:var(--text-muted);display:block">Calculated Revenue</span>
+                    <strong id="return-total-revenue" class="revenue-amount">ETB 0.00</strong>
+                  </div>
+                  <button type="submit" id="btn-complete-trip" class="btn btn-success">Complete Trip</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: PAYMENTS -->
+      <div id="tab-payments" class="tab-pane fade-in d-none">
+        <div class="dashboard-grid two-col">
+          <div class="keeper-only">
+            <div class="card">
+              <h2 class="card-title">Record Payment</h2>
+              <form id="payment-form" onsubmit="event.preventDefault()">
+                <div class="form-group">
+                  <label for="pay-date">Date <span class="text-secondary" style="font-size:0.75rem">(auto-today)</span></label>
+                  <input type="date" id="pay-date" class="input-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="pay-party">Payer / Party Name</label>
+                  <input type="text" id="pay-party" class="input-control" list="pay-party-list" required placeholder="Driver or customer name">
+                  <datalist id="pay-party-list"></datalist>
+                </div>
+                <div class="form-group">
+                  <label for="pay-type">Payment Type</label>
+                  <select id="pay-type" class="input-control">
+                    <option value="cash">Cash</option>
+                    <option value="transfer">Bank Transfer (Telebirr / CBE)</option>
+                    <option value="credit">Credit / Receivable</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="pay-amount">Amount (ETB)</label>
+                  <input type="number" id="pay-amount" class="input-control" required min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                  <label for="pay-note">Note (optional)</label>
+                  <input type="text" id="pay-note" class="input-control" placeholder="e.g. Delivery payment or ref code">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Save Payment</button>
+              </form>
+            </div>
+          </div>
+          <div>
+            <div class="metrics-row" style="grid-template-columns:1fr 1fr;margin-bottom:16px">
+              <div class="metric-card success">
+                <span class="metric-label">Total Received</span>
+                <span class="metric-value" id="pay-total-in">ETB 0.00</span>
+              </div>
+              <div class="metric-card danger">
+                <span class="metric-label">Total Credit (Unpaid)</span>
+                <span class="metric-value" id="pay-total-credit">ETB 0.00</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="flex justify-between align-center" style="margin-bottom:16px;">
+                <h2 class="card-title" style="margin-bottom:0">Payment History</h2>
+                <div class="flex gap-2">
+                  <input type="search" id="payment-search" class="input-control input-sm search-glass" style="max-width:180px;" placeholder="🔍 Filter...">
+                  <button class="btn btn-glass btn-sm" onclick="exportPaymentsCSV()">Export CSV</button>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead><tr><th>Date</th><th>Party</th><th>Type</th><th class="text-right">Amount (ETB)</th><th>Note</th><th class="text-center keeper-only">Del</th></tr></thead>
+                  <tbody id="payments-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: REPORTS -->
+      <div id="tab-history" class="tab-pane fade-in d-none">
+        <div class="metrics-row">
+          <div class="metric-card accent">
+            <span class="metric-label">Total Revenue</span>
+            <span class="metric-value" id="report-total-revenue">ETB 0.00</span>
+          </div>
+          <div class="metric-card success">
+            <span class="metric-label">Completed Routes</span>
+            <span class="metric-value" id="report-completed-trips">0</span>
+          </div>
+          <div class="metric-card warning">
+            <span class="metric-label">Active Routes</span>
+            <span class="metric-value" id="report-active-trips">0</span>
+          </div>
+          <div class="metric-card info">
+            <span class="metric-label">Products</span>
+            <span class="metric-value" id="report-total-products">0</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="flex justify-between align-center" style="margin-bottom:16px;">
+            <h2 class="card-title" style="margin-bottom:0">Trip Sales Log</h2>
+            <div class="flex gap-2">
+              <input type="search" id="history-search" class="input-control input-sm search-glass" style="max-width:200px;" placeholder="🔍 Filter trips...">
+              <button class="btn btn-glass btn-sm" onclick="exportTripsCSV()">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead><tr><th>Date</th><th>Driver</th><th>Dispatched</th><th>Sold</th><th>Returned</th><th class="text-right">Revenue (ETB)</th><th>Status</th></tr></thead>
+              <tbody id="history-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: ADMIN -->
+      <div id="tab-admin" class="tab-pane fade-in d-none">
+        <div class="dashboard-grid two-col">
+          <div>
+            <div class="card">
+              <h2 class="card-title">Manage Stores</h2>
+              <form id="store-form">
+                <div class="form-group">
+                  <label>Store Name</label>
+                  <input type="text" id="new-store-name" class="input-control" required placeholder="e.g. Hawassa Branch">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Add Store</button>
+              </form>
+              <div class="table-responsive" style="margin-top:20px">
+                <table>
+                  <thead><tr><th>Store ID</th><th>Name</th></tr></thead>
+                  <tbody id="stores-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <h2 class="card-title">Manage Storekeepers</h2>
+              <form id="user-form">
+                <div class="form-group"><label>Username</label><input type="text" id="new-user-name" class="input-control" required></div>
+                <div class="form-group"><label>Password</label><input type="password" id="new-user-pass" class="input-control" required></div>
+                <div class="form-group"><label>Assign to Store</label><select id="new-user-store" class="input-control" required></select></div>
+                <button type="submit" class="btn btn-primary btn-block">Add Storekeeper</button>
+              </form>
+              <div class="table-responsive" style="margin-top:20px">
+                <table>
+                  <thead><tr><th>Username</th><th>Role</th><th>Store</th><th class="text-center">Action</th></tr></thead>
+                  <tbody id="users-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-contents -->
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
