@@ -332,6 +332,17 @@ const overviewRecentBody = document.getElementById('overview-recent-body');
 const headerSheetsBadge = document.getElementById('header-sheets-badge');
 const btnSyncNow = document.getElementById('btn-sync-now');
 
+// Change Password DOM
+const btnOpenChangePass = document.getElementById('btn-open-change-pass');
+const changePassPanel = document.getElementById('change-pass-panel');
+const btnCloseChangePass = document.getElementById('btn-close-change-pass');
+const btnCancelChangePass = document.getElementById('btn-cancel-change-pass');
+const changePassForm = document.getElementById('change-pass-form');
+const changeCurrentPass = document.getElementById('change-current-pass');
+const changeNewPass = document.getElementById('change-new-pass');
+const changeConfirmPass = document.getElementById('change-confirm-pass');
+const changePassAlert = document.getElementById('change-pass-alert');
+
 // ==================== AUTH ====================
 function initAuth() {
   loadState();
@@ -607,7 +618,7 @@ function renderAdmin() {
     if (u.role === 'owner') return;
     const store = state.stores.find(s => s.id === u.storeId);
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><strong>${u.username}</strong></td><td><span class="badge badge-info">Keeper</span></td><td>${store ? store.name : 'Unknown'}</td><td class="text-center"><button class="btn btn-danger btn-xs" onclick="deleteUser('${u.username}')">Remove</button></td>`;
+    tr.innerHTML = `<td><strong>${u.username}</strong></td><td><span class="badge badge-info">Keeper</span></td><td>${store ? store.name : 'Unknown'}</td><td class="text-center"><button class="btn btn-secondary btn-xs" style="margin-right:4px;" onclick="resetUserPassword('${u.username}')">Reset Pass</button><button class="btn btn-danger btn-xs" onclick="deleteUser('${u.username}')">Remove</button></td>`;
     usersTableBody.appendChild(tr);
   });
   
@@ -655,6 +666,21 @@ window.deleteUser = function(username) {
     state.users = state.users.filter(u => u.username !== username);
     saveState();
     renderAdmin();
+  }
+};
+
+window.resetUserPassword = function(username) {
+  const newPass = prompt(`Enter new password for storekeeper "${username}" (minimum 4 characters):`);
+  if (newPass === null) return;
+  if (newPass.trim().length < 4) {
+    alert('Password must be at least 4 characters long.');
+    return;
+  }
+  const u = state.users.find(user => user.username === username);
+  if (u) {
+    u.password = newPass.trim();
+    saveState();
+    alert(`Password for "${username}" has been successfully updated.`);
   }
 };
 
@@ -1408,6 +1434,92 @@ if (btnSyncNow) {
     btnSyncNow.classList.add('syncing');
     await SheetsStorage.pushToSheets(true);
     btnSyncNow.classList.remove('syncing');
+  });
+}
+
+// ==================== PASSWORD SHOW / HIDE TOGGLE ====================
+document.addEventListener('click', (e) => {
+  const toggleBtn = e.target.closest('.btn-toggle-password');
+  if (!toggleBtn) return;
+  const wrapper = toggleBtn.closest('.password-wrapper');
+  if (!wrapper) return;
+  const input = wrapper.querySelector('input');
+  if (!input) return;
+
+  const isPassword = input.type === 'password';
+  input.type = isPassword ? 'text' : 'password';
+
+  const eyeOpen = toggleBtn.querySelector('.eye-open');
+  const eyeClosed = toggleBtn.querySelector('.eye-closed');
+  if (eyeOpen && eyeClosed) {
+    if (isPassword) {
+      eyeOpen.classList.add('d-none');
+      eyeClosed.classList.remove('d-none');
+    } else {
+      eyeOpen.classList.remove('d-none');
+      eyeClosed.classList.add('d-none');
+    }
+  }
+});
+
+// ==================== CHANGE PASSWORD FEATURE ====================
+if (btnOpenChangePass && changePassPanel) {
+  btnOpenChangePass.addEventListener('click', () => {
+    const isHidden = changePassPanel.classList.contains('d-none');
+    if (isHidden) {
+      changePassPanel.classList.remove('d-none');
+      if (changePassForm) changePassForm.reset();
+      if (changePassAlert) changePassAlert.classList.add('d-none');
+      changeCurrentPass?.focus();
+      changePassPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      changePassPanel.classList.add('d-none');
+    }
+  });
+}
+
+function closeChangePassPanel() {
+  if (changePassPanel) {
+    changePassPanel.classList.add('d-none');
+    if (changePassForm) changePassForm.reset();
+  }
+}
+
+if (btnCloseChangePass) btnCloseChangePass.addEventListener('click', closeChangePassPanel);
+if (btnCancelChangePass) btnCancelChangePass.addEventListener('click', closeChangePassPanel);
+
+if (changePassForm) {
+  changePassForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const currentP = changeCurrentPass.value;
+    const newP = changeNewPass.value;
+    const confirmP = changeConfirmPass.value;
+
+    if (currentUser.password !== currentP) {
+      showMsg(changePassAlert, 'Current password is incorrect.');
+      return;
+    }
+    if (newP.length < 4) {
+      showMsg(changePassAlert, 'New password must be at least 4 characters.');
+      return;
+    }
+    if (newP !== confirmP) {
+      showMsg(changePassAlert, 'New passwords do not match.');
+      return;
+    }
+
+    // Update in state
+    const user = state.users.find(u => u.username === currentUser.username);
+    if (user) user.password = newP;
+    currentUser.password = newP;
+    saveState();
+
+    showMsg(changePassAlert, 'Password updated successfully!', true);
+    setTimeout(() => {
+      closeChangePassPanel();
+    }, 1200);
   });
 }
 
