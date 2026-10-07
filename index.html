@@ -113,54 +113,6 @@
   </header>
 
   <main class="main-container">
-    <!-- CHANGE PASSWORD INLINE PANEL -->
-    <div id="change-pass-panel" class="card d-none fade-in" style="max-width:440px; margin: 0 auto 24px; border: 1px solid rgba(99,102,241,0.35); box-shadow: var(--shadow-glass);">
-      <div class="flex justify-between align-center" style="margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:10px;">
-        <h3 style="font-size:1.05rem;font-weight:700;display:flex;align-items:center;gap:8px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Change Account Password
-        </h3>
-        <button type="button" class="btn-close" id="btn-close-change-pass" title="Close">&times;</button>
-      </div>
-      <div id="change-pass-alert" class="alert alert-danger d-none"></div>
-      <form id="change-pass-form" onsubmit="event.preventDefault()">
-        <div class="form-group">
-          <label for="change-current-pass">Current Password</label>
-          <div class="password-wrapper">
-            <input type="password" id="change-current-pass" class="input-control" required placeholder="Enter current password">
-            <button type="button" class="btn-toggle-password" title="Show/Hide Password" tabindex="-1">
-              <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="eye-closed d-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="change-new-pass">New Password</label>
-          <div class="password-wrapper">
-            <input type="password" id="change-new-pass" class="input-control" required placeholder="Min 4 characters">
-            <button type="button" class="btn-toggle-password" title="Show/Hide Password" tabindex="-1">
-              <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="eye-closed d-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="change-confirm-pass">Confirm New Password</label>
-          <div class="password-wrapper">
-            <input type="password" id="change-confirm-pass" class="input-control" required placeholder="Re-type new password">
-            <button type="button" class="btn-toggle-password" title="Show/Hide Password" tabindex="-1">
-              <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="eye-closed d-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <button type="submit" id="btn-save-change-pass" class="btn btn-primary" style="flex:1">Update Password</button>
-          <button type="button" id="btn-cancel-change-pass" class="btn btn-secondary">Cancel</button>
-        </div>
-      </form>
-    </div>
-
     <nav class="tabs-bar">
       <button class="tab-btn active" data-tab="overview">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -277,7 +229,10 @@
             <div class="card">
               <div class="flex justify-between align-center" style="margin-bottom:16px;">
                 <h2 class="card-title" style="margin-bottom:0">Store Stock Levels</h2>
-                <input type="search" id="inventory-search" class="input-control input-sm search-glass" style="max-width:220px;" placeholder="🔍 Search stock...">
+                <div class="flex gap-2 align-center">
+                  <button type="button" id="btn-scan-stock" class="btn btn-glass btn-sm keeper-only" title="Scan Barcode to Find / Edit Product">📷 Scan Barcode</button>
+                  <input type="search" id="inventory-search" class="input-control input-sm search-glass" style="max-width:220px;" placeholder="🔍 Search stock...">
+                </div>
               </div>
               <div class="table-responsive">
                 <table>
@@ -346,6 +301,7 @@
               <div class="flex justify-between align-center" style="margin-bottom:12px;">
                 <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-secondary)">Products to Dispatch</h3>
                 <div class="quick-actions-bar" style="margin-bottom:0;">
+                  <button type="button" class="btn btn-glass btn-xs" id="btn-scan-dispatch">📷 Scan Barcode</button>
                   <button type="button" class="btn btn-glass btn-xs" id="btn-dispatch-fill-max">⚡ Fill Max Stock</button>
                   <button type="button" class="btn btn-glass btn-xs" id="btn-dispatch-clear">✕ Clear All</button>
                 </div>
@@ -404,12 +360,13 @@
                 </div>
 
                 <div id="returns-alert" class="alert alert-danger d-none"></div>
-                <div class="returns-list-header"><div>Product</div><div class="text-center">Dispatched</div><div class="text-center">Sold</div><div class="text-center">Returned</div></div>
+                <div class="returns-list-header"><div>Product</div><div class="text-center">Dispatched</div><div class="text-center">Sold</div><div class="text-center">Returned</div><div class="text-center">Damaged</div></div>
                 <div id="returns-items-list" style="margin-bottom:16px"></div>
                 <div class="revenue-bar">
                   <div>
                     <span style="font-size:0.8rem;color:var(--text-muted);display:block">Calculated Revenue</span>
                     <strong id="return-total-revenue" class="revenue-amount">ETB 0.00</strong>
+                    <span id="return-total-damaged-badge" class="badge badge-danger d-none" style="margin-left:8px;font-size:0.75rem;">0 Damaged</span>
                   </div>
                   <button type="submit" id="btn-complete-trip" class="btn btn-success">Complete Trip</button>
                 </div>
@@ -421,6 +378,19 @@
 
       <!-- TAB: PAYMENTS -->
       <div id="tab-payments" class="tab-pane fade-in d-none">
+        <div class="sub-tabs-bar">
+          <button type="button" class="sub-tab-btn active" id="btn-subtab-tx" data-subtab="tx">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Transactions Log
+          </button>
+          <button type="button" class="sub-tab-btn" id="btn-subtab-ledger" data-subtab="ledger">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Credit & Receivables Ledger
+          </button>
+        </div>
+
+        <!-- SUBTAB PANE: TRANSACTIONS -->
+        <div id="subtab-pane-tx">
         <div class="dashboard-grid two-col">
           <div class="keeper-only">
             <div class="card">
@@ -484,6 +454,50 @@
             </div>
           </div>
         </div>
+        </div><!-- /subtab-pane-tx -->
+
+        <!-- SUBTAB PANE: CREDIT & RECEIVABLES LEDGER -->
+        <div id="subtab-pane-ledger" class="d-none">
+          <div class="metrics-row" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom:16px;">
+            <div class="metric-card danger">
+              <span class="metric-label">Total Outstanding Receivables</span>
+              <span class="metric-value" id="ledger-total-outstanding">ETB 0.00</span>
+            </div>
+            <div class="metric-card warning">
+              <span class="metric-label">Parties with Open Credit</span>
+              <span class="metric-value" id="ledger-parties-count">0</span>
+            </div>
+            <div class="metric-card success">
+              <span class="metric-label">Total Collected (Cash/Transfer)</span>
+              <span class="metric-value" id="ledger-total-collected">ETB 0.00</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="flex justify-between align-center" style="margin-bottom:16px;">
+              <h2 class="card-title" style="margin-bottom:0">Credit & Receivables Ledger</h2>
+              <div class="flex gap-2">
+                <input type="search" id="ledger-search" class="input-control input-sm search-glass" style="max-width:200px;" placeholder="🔍 Filter party...">
+                <button class="btn btn-glass btn-sm" onclick="exportLedgerCSV()">Export CSV</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Party / Driver</th>
+                    <th>Type / Role</th>
+                    <th class="text-right">Total Incurred</th>
+                    <th class="text-right">Paid</th>
+                    <th class="text-right">Balance Due</th>
+                    <th>Status</th>
+                    <th class="text-center keeper-only">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /subtab-pane-ledger -->
       </div>
 
       <!-- TAB: REPORTS -->
@@ -516,7 +530,7 @@
           </div>
           <div class="table-responsive">
             <table>
-              <thead><tr><th>Date</th><th>Driver</th><th>Dispatched</th><th>Sold</th><th>Returned</th><th class="text-right">Revenue (ETB)</th><th>Status</th></tr></thead>
+              <thead><tr><th>Date</th><th>Driver</th><th>Dispatched</th><th>Sold</th><th>Ret / Dmg</th><th class="text-right">Revenue (ETB)</th><th>Settlement</th><th class="text-center">Actions</th></tr></thead>
               <tbody id="history-table-body"></tbody>
             </table>
           </div>
@@ -624,6 +638,118 @@
         <button type="button" id="btn-cancel-reset-modal" class="btn btn-secondary">Cancel</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div id="change-pass-modal" class="modal-overlay d-none">
+  <div class="modal-content" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Change Password
+      </div>
+      <button type="button" class="btn-close" id="btn-close-change-pass" title="Close">&times;</button>
+    </div>
+    <div id="change-pass-alert" class="alert alert-danger d-none"></div>
+    <form id="change-pass-form" onsubmit="event.preventDefault()">
+      <div class="form-group">
+        <label for="change-current-pass">Current Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="change-current-pass" class="input-control" required placeholder="Enter current password">
+          <button type="button" class="btn-toggle-password" title="Show/Hide Password" tabindex="-1">
+            <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-closed d-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="change-new-pass">New Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="change-new-pass" class="input-control" required placeholder="Min 4 characters">
+          <button type="button" class="btn-toggle-password" title="Show/Hide Password" tabindex="-1">
+            <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-closed d-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="change-confirm-pass">Confirm New Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="change-confirm-pass" class="input-control" required placeholder="Re-type new password">
+          <button type="button" class="btn-toggle-password" title="Show/Hide Password" tabindex="-1">
+            <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-closed d-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" id="btn-save-change-pass" class="btn btn-primary" style="flex:1">Update Password</button>
+        <button type="button" id="btn-cancel-change-pass" class="btn btn-secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- BARCODE / QR SCANNER MODAL -->
+<div id="barcode-scanner-modal" class="modal-overlay d-none">
+  <div class="modal-content" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+        <span id="scanner-modal-title">Scan Barcode / QR</span>
+      </div>
+      <button type="button" class="btn-close" id="btn-close-scanner-modal" title="Close">&times;</button>
+    </div>
+    
+    <div class="scanner-container">
+      <video id="scanner-video" class="scanner-video" autoplay playsinline muted></video>
+      <div class="scanner-viewport-box">
+        <div class="scanner-laser"></div>
+      </div>
+    </div>
+
+    <div id="scanner-status-msg" class="text-center text-secondary" style="font-size:0.85rem;margin-bottom:14px;">
+      Align product barcode within viewfinder...
+    </div>
+
+    <div class="dashed-card" style="padding:12px;margin-bottom:16px;">
+      <label for="scanner-manual-input" style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:6px;">
+        Or enter barcode / SKU manually (or scan via USB reader):
+      </label>
+      <div class="flex gap-2">
+        <input type="text" id="scanner-manual-input" class="input-control" placeholder="e.g. SWB-001 or barcode">
+        <button type="button" id="btn-scanner-submit-manual" class="btn btn-secondary">Apply</button>
+      </div>
+    </div>
+
+    <button type="button" id="btn-cancel-scanner" class="btn btn-secondary btn-block">Close Scanner</button>
+  </div>
+</div>
+
+<!-- PRINTABLE / SHAREABLE RECEIPT MODAL -->
+<div id="receipt-modal" class="modal-overlay d-none">
+  <div class="modal-content" style="max-width:700px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Trip Waybill & Receipt
+      </div>
+      <button type="button" class="btn-close" id="btn-close-receipt-modal" title="Close">&times;</button>
+    </div>
+
+    <!-- The actual printable document -->
+    <div id="receipt-printable-area" class="receipt-document">
+      <!-- Injected dynamically by JS -->
+    </div>
+
+    <!-- Actions toolbar (hidden on print) -->
+    <div class="receipt-actions-bar">
+      <button type="button" class="btn btn-glass btn-sm" id="btn-copy-receipt-text">📋 Copy Summary</button>
+      <button type="button" class="btn btn-success btn-sm" id="btn-share-whatsapp">💬 Share via WhatsApp</button>
+      <button type="button" class="btn btn-primary btn-sm" id="btn-print-receipt">🖨️ Print / Save PDF</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-close-receipt-bottom">Close</button>
+    </div>
   </div>
 </div>
 

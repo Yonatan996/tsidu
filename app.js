@@ -332,9 +332,9 @@ const overviewRecentBody = document.getElementById('overview-recent-body');
 const headerSheetsBadge = document.getElementById('header-sheets-badge');
 const btnSyncNow = document.getElementById('btn-sync-now');
 
-// Change Password DOM
+// Change Password Modal DOM
 const btnOpenChangePass = document.getElementById('btn-open-change-pass');
-const changePassPanel = document.getElementById('change-pass-panel');
+const changePassModal = document.getElementById('change-pass-modal');
 const btnCloseChangePass = document.getElementById('btn-close-change-pass');
 const btnCancelChangePass = document.getElementById('btn-cancel-change-pass');
 const changePassForm = document.getElementById('change-pass-form');
@@ -342,6 +342,41 @@ const changeCurrentPass = document.getElementById('change-current-pass');
 const changeNewPass = document.getElementById('change-new-pass');
 const changeConfirmPass = document.getElementById('change-confirm-pass');
 const changePassAlert = document.getElementById('change-pass-alert');
+
+// Barcode Scanner DOM
+const btnScanDispatch = document.getElementById('btn-scan-dispatch');
+const btnScanStock = document.getElementById('btn-scan-stock');
+const barcodeScannerModal = document.getElementById('barcode-scanner-modal');
+const scannerVideo = document.getElementById('scanner-video');
+const scannerModalTitle = document.getElementById('scanner-modal-title');
+const scannerStatusMsg = document.getElementById('scanner-status-msg');
+const scannerManualInput = document.getElementById('scanner-manual-input');
+const btnScannerSubmitManual = document.getElementById('btn-scanner-submit-manual');
+const btnCancelScanner = document.getElementById('btn-cancel-scanner');
+const btnCloseScannerModal = document.getElementById('btn-close-scanner-modal');
+
+// Receipt Modal DOM
+const receiptModal = document.getElementById('receipt-modal');
+const receiptPrintableArea = document.getElementById('receipt-printable-area');
+const btnCloseReceiptModal = document.getElementById('btn-close-receipt-modal');
+const btnCloseReceiptBottom = document.getElementById('btn-close-receipt-bottom');
+const btnPrintReceipt = document.getElementById('btn-print-receipt');
+const btnShareWhatsapp = document.getElementById('btn-share-whatsapp');
+const btnCopyReceiptText = document.getElementById('btn-copy-receipt-text');
+
+// Returns Damaged Badge
+const returnTotalDamagedBadge = document.getElementById('return-total-damaged-badge');
+
+// Payments Sub-Tabs & Credit Ledger DOM
+const btnSubtabTx = document.getElementById('btn-subtab-tx');
+const btnSubtabLedger = document.getElementById('btn-subtab-ledger');
+const subtabPaneTx = document.getElementById('subtab-pane-tx');
+const subtabPaneLedger = document.getElementById('subtab-pane-ledger');
+const ledgerTotalOutstanding = document.getElementById('ledger-total-outstanding');
+const ledgerPartiesCount = document.getElementById('ledger-parties-count');
+const ledgerTotalCollected = document.getElementById('ledger-total-collected');
+const ledgerTableBody = document.getElementById('ledger-table-body');
+const ledgerSearchInput = document.getElementById('ledger-search');
 
 // Reset Password Modal DOM
 const resetPassModal = document.getElementById('reset-pass-modal');
@@ -502,7 +537,10 @@ function renderAll() {
     case 'drivers': renderDrivers(); break; 
     case 'dispatch': renderDispatchForm(); break; 
     case 'returns': renderReturnsPane(); break; 
-    case 'payments': renderPayments(); break; 
+    case 'payments': 
+      renderPayments(); 
+      renderCreditLedger();
+      break; 
     case 'history': renderHistory(); break; 
     case 'admin': renderAdmin(); break; 
   }
@@ -612,6 +650,9 @@ if (paymentSearchInput) {
 }
 if (historySearchInput) {
   historySearchInput.addEventListener('input', () => renderHistory());
+}
+if (ledgerSearchInput) {
+  ledgerSearchInput.addEventListener('input', () => renderCreditLedger());
 }
 
 // ==================== ADMIN (OWNER ONLY) ====================
@@ -995,7 +1036,7 @@ if (dispatchForm) {
   });
 }
 
-// ==================== RETURNS ====================
+// ==================== RETURNS & DAMAGED GOODS ====================
 function renderReturnsPane() {
   const sd = getStoreData();
   if (!sd) return;
@@ -1020,11 +1061,14 @@ function renderReturnsPane() {
         <strong>Driver: ${trip.driverName}</strong>
         <span class="badge badge-info">${totalItems} units</span>
       </div>
-      <div class="flex justify-between align-center text-secondary" style="font-size:0.82rem;">
+      <div class="flex justify-between align-center text-secondary" style="font-size:0.82rem; margin-bottom:8px;">
         <span>Date: ${trip.date}</span>
         <span>ETB ${estVal.toFixed(2)}</span>
       </div>
-      <button class="btn btn-secondary btn-sm btn-block" style="margin-top:10px;" onclick="selectTripForReturn('${trip.id}')">Process Evening Return</button>
+      <div class="flex gap-2">
+        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="selectTripForReturn('${trip.id}')">Process Evening Return</button>
+        <button class="btn btn-glass btn-sm" title="Print Morning Dispatch Waybill" onclick="openReceiptModal('${trip.id}', 'waybill')">📄 Waybill</button>
+      </div>
     `;
     activeTripsList.appendChild(card);
   });
@@ -1058,6 +1102,9 @@ window.selectTripForReturn = function(tripId) {
       <div>
         <input type="number" id="ret-qty-${item.productId}" class="input-control text-center return-ret-input" min="0" max="${item.quantity}" data-id="${item.productId}" data-disp="${item.quantity}" placeholder="0" oninput="handleReturnCalculation('${item.productId}','returned')">
       </div>
+      <div>
+        <input type="number" id="dmg-qty-${item.productId}" class="input-control text-center return-dmg-input" min="0" max="${item.quantity}" data-id="${item.productId}" data-disp="${item.quantity}" placeholder="0" oninput="handleReturnCalculation('${item.productId}','damaged')">
+      </div>
     `;
     returnsItemsList.appendChild(div);
   });
@@ -1074,7 +1121,9 @@ if (btnReturnAllSold) {
       inp.value = disp;
       const pid = inp.dataset.id;
       const retInput = document.getElementById(`ret-qty-${pid}`);
+      const dmgInput = document.getElementById(`dmg-qty-${pid}`);
       if (retInput) retInput.value = 0;
+      if (dmgInput) dmgInput.value = 0;
     });
     calculateReturnsSummary();
   });
@@ -1088,40 +1137,53 @@ if (btnReturnAllReturned) {
       inp.value = disp;
       const pid = inp.dataset.id;
       const soldInput = document.getElementById(`sold-qty-${pid}`);
+      const dmgInput = document.getElementById(`dmg-qty-${pid}`);
       if (soldInput) soldInput.value = 0;
+      if (dmgInput) dmgInput.value = 0;
     });
     calculateReturnsSummary();
   });
 }
 
-// Bidirectional Smart Calculation for Returns
+// 3-Way Smart Calculation for Returns: Dispatched = Sold + Returned + Damaged
 window.handleReturnCalculation = function(productId, field) {
   const dispEl = document.getElementById(`disp-qty-${productId}`);
   if (!dispEl) return;
   const disp = parseInt(dispEl.textContent) || 0;
   const soldInput = document.getElementById(`sold-qty-${productId}`);
   const retInput = document.getElementById(`ret-qty-${productId}`);
-  if (!soldInput || !retInput) return;
+  const dmgInput = document.getElementById(`dmg-qty-${productId}`);
+  if (!soldInput || !retInput || !dmgInput) return;
 
   let sold = parseInt(soldInput.value) || 0;
   let ret = parseInt(retInput.value) || 0;
+  let dmg = parseInt(dmgInput.value) || 0;
 
   if (field === 'sold') {
     if (sold > disp) { sold = disp; soldInput.value = disp; }
     if (sold < 0) { sold = 0; soldInput.value = 0; }
-    ret = disp - sold;
+    if (sold + dmg > disp) { dmg = disp - sold; dmgInput.value = dmg; }
+    ret = Math.max(0, disp - sold - dmg);
     retInput.value = ret;
-  } else {
+  } else if (field === 'returned') {
     if (ret > disp) { ret = disp; retInput.value = disp; }
     if (ret < 0) { ret = 0; retInput.value = 0; }
-    sold = disp - ret;
+    if (ret + dmg > disp) { dmg = disp - ret; dmgInput.value = dmg; }
+    sold = Math.max(0, disp - ret - dmg);
     soldInput.value = sold;
+  } else if (field === 'damaged') {
+    if (dmg > disp) { dmg = disp; dmgInput.value = disp; }
+    if (dmg < 0) { dmg = 0; dmgInput.value = 0; }
+    if (sold + dmg > disp) { sold = disp - dmg; soldInput.value = sold; }
+    ret = Math.max(0, disp - sold - dmg);
+    retInput.value = ret;
   }
   calculateReturnsSummary();
 };
 
 window.calculateReturnsSummary = function() {
   let revenue = 0;
+  let totalDamaged = 0;
   let hasError = false;
   const soldInputs = document.querySelectorAll('.return-sold-input');
 
@@ -1131,19 +1193,30 @@ window.calculateReturnsSummary = function() {
     const disp = parseInt(inp.dataset.disp) || 0;
     const sold = parseInt(inp.value) || 0;
     const retInput = document.getElementById(`ret-qty-${pid}`);
+    const dmgInput = document.getElementById(`dmg-qty-${pid}`);
     const ret = parseInt(retInput ? retInput.value : 0) || 0;
+    const dmg = parseInt(dmgInput ? dmgInput.value : 0) || 0;
 
-    if (sold + ret !== disp) {
+    if (sold + ret + dmg !== disp) {
       hasError = true;
     }
     revenue += sold * price;
+    totalDamaged += dmg;
   });
 
   returnTotalRevenue.textContent = `ETB ${revenue.toFixed(2)}`;
-  const btn = document.getElementById('btn-complete-trip');
+  if (returnTotalDamagedBadge) {
+    if (totalDamaged > 0) {
+      returnTotalDamagedBadge.textContent = `${totalDamaged} Damaged/Loss`;
+      returnTotalDamagedBadge.classList.remove('d-none');
+    } else {
+      returnTotalDamagedBadge.classList.add('d-none');
+    }
+  }
 
+  const btn = document.getElementById('btn-complete-trip');
   if (hasError) {
-    returnsAlert.textContent = 'Notice: Sold Qty + Returned Qty must equal total dispatched quantity.';
+    returnsAlert.textContent = 'Notice: Dispatched quantity must equal Sold + Returned + Damaged.';
     returnsAlert.classList.remove('d-none');
     if (btn) btn.disabled = true;
   } else {
@@ -1168,16 +1241,18 @@ if (returnsForm) {
     trip.dispatchData.forEach(item => {
       const sold = parseInt(document.getElementById(`sold-qty-${item.productId}`)?.value) || 0;
       const returned = parseInt(document.getElementById(`ret-qty-${item.productId}`)?.value) || 0;
-      if (sold + returned !== item.quantity) mismatch = true;
-      returnData.push({ productId: item.productId, sold, returned });
+      const damaged = parseInt(document.getElementById(`dmg-qty-${item.productId}`)?.value) || 0;
+      if (sold + returned + damaged !== item.quantity) mismatch = true;
+      returnData.push({ productId: item.productId, sold, returned, damaged });
     });
 
     if (mismatch) {
-      showMsg(returnsAlert, 'Sold + Returned quantities must equal dispatched quantity for every item.');
+      showMsg(returnsAlert, 'Sold + Returned + Damaged quantities must equal dispatched quantity for every item.');
       return;
     }
 
-    // Restock returned items back to store inventory
+    // RESTOCK LOGIC: ONLY 'returned' goods are added back into inventory!
+    // 'damaged' goods are logged as losses/shrinkage and NOT restocked.
     returnData.forEach(r => {
       const prod = sd.products.find(p => p.id === r.productId);
       if (prod) prod.stock += r.returned;
@@ -1190,8 +1265,9 @@ if (returnsForm) {
     returnsForm.reset();
     returnsForm.classList.add('d-none');
     returnsFallback.classList.remove('d-none');
-    alert(`Trip for ${trip.driverName} completed and restocked successfully!`);
-    document.querySelector('.tab-btn[data-tab="history"]').click();
+    
+    // Prompt with settlement receipt preview
+    openReceiptModal(trip.id, 'settlement');
   });
 }
 
@@ -1319,17 +1395,43 @@ function renderHistory() {
 
     const dispatchedStr = t.dispatchData.map(d => `${d.quantity}x ${d.productName}`).join(', ');
     const soldStr = t.returnData.map(r => `${r.sold}x ${(sd.products.find(p => p.id === r.productId) || {}).name || ''}`).join(', ');
-    const retStr = t.returnData.map(r => `${r.returned}x ${(sd.products.find(p => p.id === r.productId) || {}).name || ''}`).join(', ');
+    const retDmgStr = t.returnData.map(r => {
+      const pName = (sd.products.find(p => p.id === r.productId) || {}).name || '';
+      let s = `${r.returned} ret`;
+      if (r.damaged > 0) s += ` (${r.damaged} dmg)`;
+      return `${s} ${pName}`;
+    }).join(' | ');
+
+    // Calculate Payments Settled for this Trip
+    const paidForTrip = sd.payments
+      .filter(p => p.tripId === t.id || (p.note && p.note.includes(t.id)))
+      .reduce((sum, p) => sum + (p.type === 'credit' ? 0 : p.amount), 0);
+    const balanceDue = Math.max(0, tripRev - paidForTrip);
+
+    let settlementBadge = '<span class="badge badge-secondary">On-Road</span>';
+    if (t.status === 'completed') {
+      if (balanceDue === 0) {
+        settlementBadge = '<span class="badge badge-success">Settled</span>';
+      } else if (paidForTrip > 0) {
+        settlementBadge = `<span class="badge badge-warning" title="ETB ${paidForTrip.toFixed(2)} paid">Partial (-${balanceDue.toFixed(0)})</span>`;
+      } else {
+        settlementBadge = `<span class="badge badge-danger">Unpaid (${balanceDue.toFixed(0)})</span>`;
+      }
+    }
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${t.date}</td>
       <td><strong>${t.driverName}</strong></td>
       <td>${dispatchedStr}</td>
-      <td>${t.status === 'completed' ? soldStr : '<span class="text-secondary">—</span>'}</td>
-      <td>${t.status === 'completed' ? retStr : '<span class="text-secondary">—</span>'}</td>
+      <td>${t.status === 'completed' ? (soldStr || '—') : '<span class="text-secondary">—</span>'}</td>
+      <td>${t.status === 'completed' ? (retDmgStr || '—') : '<span class="text-secondary">—</span>'}</td>
       <td class="text-right"><strong>ETB ${tripRev.toFixed(2)}</strong></td>
-      <td><span class="badge ${t.status === 'active' ? 'badge-warning' : 'badge-success'}">${t.status === 'active' ? 'Active' : 'Completed'}</span></td>
+      <td>${settlementBadge}</td>
+      <td class="text-center" style="white-space:nowrap">
+        <button class="btn btn-glass btn-xs" title="View & Print Official Receipt" onclick="openReceiptModal('${t.id}')">📄 Receipt</button>
+        ${t.status === 'completed' && balanceDue > 0 ? `<button class="btn btn-primary btn-xs keeper-only" style="margin-left:4px;" title="Settle Driver Payment" onclick="settleTripPayment('${t.id}')">💰 Settle</button>` : ''}
+      </td>
     `;
     historyTableBody.appendChild(tr);
   });
@@ -1462,31 +1564,47 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// ==================== CHANGE PASSWORD FEATURE ====================
-if (btnOpenChangePass && changePassPanel) {
-  btnOpenChangePass.addEventListener('click', () => {
-    const isHidden = changePassPanel.classList.contains('d-none');
-    if (isHidden) {
-      changePassPanel.classList.remove('d-none');
-      if (changePassForm) changePassForm.reset();
-      if (changePassAlert) changePassAlert.classList.add('d-none');
-      changeCurrentPass?.focus();
-      changePassPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } else {
-      changePassPanel.classList.add('d-none');
-    }
-  });
+// ==================== CHANGE PASSWORD MODAL FEATURE ====================
+function openChangePassModal() {
+  if (!changePassModal) return;
+  if (changePassForm) changePassForm.reset();
+  if (changePassAlert) changePassAlert.classList.add('d-none');
+  changePassModal.classList.remove('d-none');
+  setTimeout(() => changeCurrentPass?.focus(), 50);
 }
 
-function closeChangePassPanel() {
-  if (changePassPanel) {
-    changePassPanel.classList.add('d-none');
+function closeChangePassModal() {
+  if (changePassModal) {
+    changePassModal.classList.add('d-none');
     if (changePassForm) changePassForm.reset();
   }
 }
 
-if (btnCloseChangePass) btnCloseChangePass.addEventListener('click', closeChangePassPanel);
-if (btnCancelChangePass) btnCancelChangePass.addEventListener('click', closeChangePassPanel);
+if (btnOpenChangePass) {
+  btnOpenChangePass.addEventListener('click', openChangePassModal);
+}
+if (btnCloseChangePass) btnCloseChangePass.addEventListener('click', closeChangePassModal);
+if (btnCancelChangePass) btnCancelChangePass.addEventListener('click', closeChangePassModal);
+
+if (changePassModal) {
+  changePassModal.addEventListener('click', (e) => {
+    if (e.target === changePassModal) closeChangePassModal();
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (changePassModal && !changePassModal.classList.contains('d-none')) {
+      closeChangePassModal();
+    }
+    if (barcodeScannerModal && !barcodeScannerModal.classList.contains('d-none')) {
+      closeBarcodeScanner();
+    }
+    if (receiptModal && !receiptModal.classList.contains('d-none')) {
+      closeReceiptModal();
+    }
+  }
+});
 
 if (changePassForm) {
   changePassForm.addEventListener('submit', (e) => {
@@ -1518,7 +1636,7 @@ if (changePassForm) {
 
     showMsg(changePassAlert, 'Password updated successfully!', true);
     setTimeout(() => {
-      closeChangePassPanel();
+      closeChangePassModal();
     }, 1200);
   });
 }
@@ -1591,6 +1709,577 @@ if (resetPassForm) {
     }, 1200);
   });
 }
+
+
+// ==================== AUDIO FEEDBACK (BEEP) ====================
+function playBeep(success = true) {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = success ? 880 : 320;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (success ? 0.15 : 0.28));
+    osc.start();
+    osc.stop(ctx.currentTime + (success ? 0.15 : 0.28));
+  } catch(e) {}
+}
+
+// ==================== BARCODE / QR SCANNER ====================
+let scannerStream = null;
+let scannerInterval = null;
+let scannerCurrentMode = 'dispatch'; // 'dispatch' or 'stock'
+
+function openBarcodeScanner(mode = 'dispatch') {
+  scannerCurrentMode = mode;
+  if (scannerModalTitle) {
+    scannerModalTitle.textContent = mode === 'dispatch' ? 'Scan Product to Dispatch' : 'Scan Product Barcode / SKU';
+  }
+  if (scannerStatusMsg) {
+    scannerStatusMsg.textContent = 'Align product barcode or QR within viewfinder...';
+    scannerStatusMsg.style.color = 'var(--text-secondary)';
+  }
+  if (scannerManualInput) scannerManualInput.value = '';
+  if (barcodeScannerModal) barcodeScannerModal.classList.remove('d-none');
+
+  // Start Camera
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
+        scannerStream = stream;
+        if (scannerVideo) {
+          scannerVideo.srcObject = stream;
+          scannerVideo.play();
+        }
+        startBarcodeDetectionLoop();
+      })
+      .catch(err => {
+        console.warn('Camera access unavailable:', err);
+        if (scannerStatusMsg) {
+          scannerStatusMsg.textContent = 'Camera not available. Enter barcode/SKU manually below.';
+          scannerStatusMsg.style.color = 'var(--danger)';
+        }
+      });
+  }
+}
+
+function closeBarcodeScanner() {
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+  if (scannerInterval) {
+    clearInterval(scannerInterval);
+    scannerInterval = null;
+  }
+  if (barcodeScannerModal) barcodeScannerModal.classList.add('d-none');
+}
+
+function startBarcodeDetectionLoop() {
+  if (!('BarcodeDetector' in window)) return;
+  const detector = new window.BarcodeDetector({
+    formats: ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e']
+  });
+
+  scannerInterval = setInterval(async () => {
+    if (!scannerVideo || scannerVideo.readyState < 2) return;
+    try {
+      const barcodes = await detector.detect(scannerVideo);
+      if (barcodes.length > 0) {
+        const rawCode = barcodes[0].rawValue;
+        handleBarcodeScanned(rawCode);
+      }
+    } catch (e) {}
+  }, 250);
+}
+
+function handleBarcodeScanned(code) {
+  if (!code) return;
+  const cleanCode = code.trim().toUpperCase();
+  const sd = getStoreData();
+  if (!sd) return;
+
+  const product = sd.products.find(p => p.sku.toUpperCase() === cleanCode || p.id === cleanCode || p.name.toUpperCase().includes(cleanCode));
+
+  if (!product) {
+    playBeep(false);
+    if (scannerStatusMsg) {
+      scannerStatusMsg.textContent = `❌ No product found for "${cleanCode}"`;
+      scannerStatusMsg.style.color = 'var(--danger)';
+    }
+    return;
+  }
+
+  playBeep(true);
+  if (scannerStatusMsg) {
+    scannerStatusMsg.textContent = `✓ Found: ${product.name} (${product.sku})`;
+    scannerStatusMsg.style.color = 'var(--accent)';
+  }
+
+  if (scannerCurrentMode === 'dispatch') {
+    // Increment quantity in dispatch form
+    const qtyInput = document.querySelector(`.dispatch-qty-input[data-id="${product.id}"]`);
+    if (qtyInput) {
+      const cur = parseInt(qtyInput.value) || 0;
+      if (cur < product.stock) {
+        qtyInput.value = cur + 1;
+        qtyInput.dispatchEvent(new Event('input'));
+        qtyInput.style.borderColor = 'var(--accent)';
+        setTimeout(() => qtyInput.style.borderColor = '', 800);
+      } else {
+        alert(`${product.name} reached maximum available stock (${product.stock}).`);
+      }
+    }
+    setTimeout(closeBarcodeScanner, 600);
+  } else {
+    // Stock mode: filter or edit product
+    closeBarcodeScanner();
+    if (inventorySearchInput) {
+      inventorySearchInput.value = product.sku;
+      renderInventory();
+    }
+    editProduct(product.id);
+  }
+}
+
+if (btnScanDispatch) btnScanDispatch.addEventListener('click', () => openBarcodeScanner('dispatch'));
+if (btnScanStock) btnScanStock.addEventListener('click', () => openBarcodeScanner('stock'));
+if (btnCancelScanner) btnCancelScanner.addEventListener('click', closeBarcodeScanner);
+if (btnCloseScannerModal) btnCloseScannerModal.addEventListener('click', closeBarcodeScanner);
+
+if (btnScannerSubmitManual) {
+  btnScannerSubmitManual.addEventListener('click', () => {
+    const val = scannerManualInput?.value.trim();
+    if (val) handleBarcodeScanned(val);
+  });
+}
+if (scannerManualInput) {
+  scannerManualInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = scannerManualInput.value.trim();
+      if (val) handleBarcodeScanned(val);
+    }
+  });
+}
+
+// ==================== PRINTABLE / SHAREABLE RECEIPTS ====================
+let currentReceiptTrip = null;
+let currentReceiptType = 'settlement';
+
+window.openReceiptModal = function(tripId, forceType = null) {
+  const sd = getStoreData();
+  if (!sd) return;
+  const trip = sd.trips.find(t => t.id === tripId);
+  if (!trip) return;
+
+  currentReceiptTrip = trip;
+  currentReceiptType = forceType || (trip.status === 'active' ? 'waybill' : 'settlement');
+
+  const currentStore = state.stores.find(s => s.id === currentStoreId) || { name: 'Main Depot' };
+  const driver = sd.drivers.find(d => d.id === trip.driverId) || { name: trip.driverName, phone: '—' };
+  const isWaybill = currentReceiptType === 'waybill';
+
+  let totalDispatchedItems = 0;
+  let totalDispatchedValue = 0;
+  let totalSoldItems = 0;
+  let totalReturnedItems = 0;
+  let totalDamagedItems = 0;
+  let totalRevenue = 0;
+  let totalLossValue = 0;
+
+  // Build items rows
+  const itemsHtml = trip.dispatchData.map((d, i) => {
+    totalDispatchedItems += d.quantity;
+    totalDispatchedValue += d.quantity * d.price;
+
+    const r = trip.returnData.find(x => x.productId === d.productId) || { sold: 0, returned: 0, damaged: 0 };
+    totalSoldItems += r.sold;
+    totalReturnedItems += r.returned;
+    totalDamagedItems += r.damaged || 0;
+    const itemRev = r.sold * d.price;
+    totalRevenue += itemRev;
+    totalLossValue += (r.damaged || 0) * d.price;
+
+    if (isWaybill) {
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${d.productName}</strong></td>
+          <td class="text-right">ETB ${d.price.toFixed(2)}</td>
+          <td class="text-center"><strong>${d.quantity}</strong></td>
+          <td class="text-right"><strong>ETB ${(d.quantity * d.price).toFixed(2)}</strong></td>
+        </tr>
+      `;
+    } else {
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${d.productName}</strong></td>
+          <td class="text-right">ETB ${d.price.toFixed(2)}</td>
+          <td class="text-center">${d.quantity}</td>
+          <td class="text-center font-bold" style="color:#059669">${r.sold}</td>
+          <td class="text-center">${r.returned}</td>
+          <td class="text-center font-bold" style="color:#dc2626">${r.damaged || 0}</td>
+          <td class="text-right"><strong>ETB ${itemRev.toFixed(2)}</strong></td>
+        </tr>
+      `;
+    }
+  }).join('');
+
+  // Payments & Balance
+  const paid = sd.payments
+    .filter(p => p.tripId === trip.id || (p.note && p.note.includes(trip.id)))
+    .reduce((sum, p) => sum + (p.type === 'credit' ? 0 : p.amount), 0);
+  const balance = Math.max(0, totalRevenue - paid);
+
+  const documentHtml = `
+    <div class="receipt-header">
+      <div class="receipt-company">TSIDU DISTRIBUTION</div>
+      <div class="receipt-store-sub">Store: ${currentStore.name} Depot</div>
+      <div class="receipt-badge">${isWaybill ? 'Morning Dispatch Waybill' : 'Evening Settlement & Sales Receipt'}</div>
+    </div>
+
+    <div class="receipt-meta-grid">
+      <div class="receipt-meta-item"><strong>Document No:</strong> ${trip.id.toUpperCase()}</div>
+      <div class="receipt-meta-item"><strong>Date:</strong> ${trip.date}</div>
+      <div class="receipt-meta-item"><strong>Assigned Driver:</strong> ${trip.driverName}</div>
+      <div class="receipt-meta-item"><strong>Driver Phone:</strong> ${driver.phone || '—'}</div>
+      <div class="receipt-meta-item"><strong>Storekeeper:</strong> ${currentUser ? currentUser.username : 'Staff'}</div>
+      <div class="receipt-meta-item"><strong>Status:</strong> ${trip.status === 'active' ? 'On Road (Active)' : 'Completed'}</div>
+    </div>
+
+    <table class="receipt-table">
+      <thead>
+        <tr>
+          <th style="width:24px">#</th>
+          <th>Product Name</th>
+          <th class="text-right">Price</th>
+          <th class="text-center">Disp</th>
+          ${!isWaybill ? '<th class="text-center">Sold</th><th class="text-center">Ret</th><th class="text-center">Dmg</th>' : ''}
+          <th class="text-right">Total (ETB)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+
+    <div class="receipt-totals-box">
+      <div class="receipt-totals-row">
+        <span>Total Dispatched Quantity:</span>
+        <strong>${totalDispatchedItems} units</strong>
+      </div>
+      <div class="receipt-totals-row">
+        <span>Total Dispatched Stock Value:</span>
+        <strong>ETB ${totalDispatchedValue.toFixed(2)}</strong>
+      </div>
+      ${!isWaybill ? `
+        <div class="receipt-totals-row">
+          <span>Total Units Sold:</span>
+          <strong style="color:#059669">${totalSoldItems} units</strong>
+        </div>
+        <div class="receipt-totals-row">
+          <span>Total Units Returned to Stock:</span>
+          <strong>${totalReturnedItems} units</strong>
+        </div>
+        ${totalDamagedItems > 0 ? `
+          <div class="receipt-totals-row" style="color:#dc2626">
+            <span>Damaged / Loss Write-Off (${totalDamagedItems} units):</span>
+            <strong>- ETB ${totalLossValue.toFixed(2)}</strong>
+          </div>
+        ` : ''}
+        <div class="receipt-totals-row grand-total">
+          <span>Net Sales Revenue Generated:</span>
+          <span>ETB ${totalRevenue.toFixed(2)}</span>
+        </div>
+        <div class="receipt-totals-row" style="margin-top:6px;">
+          <span>Payments Received / Reconciled:</span>
+          <strong>ETB ${paid.toFixed(2)}</strong>
+        </div>
+        <div class="receipt-totals-row" style="color:${balance > 0 ? '#dc2626' : '#059669'}; font-weight:700;">
+          <span>Outstanding Balance Due:</span>
+          <span>ETB ${balance.toFixed(2)} (${balance === 0 ? 'Fully Settled' : 'Unpaid'})</span>
+        </div>
+      ` : ''}
+    </div>
+
+    <div class="receipt-signatures-block">
+      <div>
+        <div class="receipt-sign-line">Storekeeper Signature & Stamp</div>
+      </div>
+      <div>
+        <div class="receipt-sign-line">Driver Acknowledgement Signature</div>
+      </div>
+    </div>
+
+    <div class="receipt-footer-notes">
+      Official verification document generated by Tsidu Inventory System • ${new Date().toLocaleString()}
+    </div>
+  `;
+
+  if (receiptPrintableArea) receiptPrintableArea.innerHTML = documentHtml;
+  if (receiptModal) receiptModal.classList.remove('d-none');
+};
+
+function closeReceiptModal() {
+  if (receiptModal) receiptModal.classList.add('d-none');
+}
+
+if (btnCloseReceiptModal) btnCloseReceiptModal.addEventListener('click', closeReceiptModal);
+if (btnCloseReceiptBottom) btnCloseReceiptBottom.addEventListener('click', closeReceiptModal);
+if (receiptModal) {
+  receiptModal.addEventListener('click', (e) => {
+    if (e.target === receiptModal) closeReceiptModal();
+  });
+}
+
+// Print Receipt
+if (btnPrintReceipt) {
+  btnPrintReceipt.addEventListener('click', () => {
+    window.print();
+  });
+}
+
+// Text Manifest Generator for WhatsApp / Copy
+function generateReceiptTextManifest(trip, type = 'settlement') {
+  const currentStore = state.stores.find(s => s.id === currentStoreId) || { name: 'Main Depot' };
+  const isWaybill = type === 'waybill';
+  let text = `📦 *TSIDU - ${isWaybill ? 'MORNING WAYBILL' : 'SALES SETTLEMENT'}*\n`;
+  text += `Depot: ${currentStore.name}\n`;
+  text += `Doc: ${trip.id.toUpperCase()} | Date: ${trip.date}\n`;
+  text += `Driver: ${trip.driverName}\n`;
+  text += `--------------------------------\n`;
+
+  let totalRev = 0;
+  trip.dispatchData.forEach(d => {
+    const r = trip.returnData.find(x => x.productId === d.productId) || { sold: 0, returned: 0, damaged: 0 };
+    const rev = r.sold * d.price;
+    totalRev += rev;
+    if (isWaybill) {
+      text += `• ${d.productName}: ${d.quantity} units @ ETB ${d.price}\n`;
+    } else {
+      text += `• ${d.productName}: ${d.quantity} disp | ${r.sold} sold | ${r.returned} ret`;
+      if (r.damaged > 0) text += ` | ${r.damaged} dmg`;
+      text += ` (ETB ${rev.toFixed(2)})\n`;
+    }
+  });
+
+  text += `--------------------------------\n`;
+  if (!isWaybill) {
+    text += `*TOTAL REVENUE: ETB ${totalRev.toFixed(2)}*\n`;
+  }
+  text += `Verified by Tsidu Enterprise.`;
+  return text;
+}
+
+if (btnCopyReceiptText) {
+  btnCopyReceiptText.addEventListener('click', () => {
+    if (!currentReceiptTrip) return;
+    const text = generateReceiptTextManifest(currentReceiptTrip, currentReceiptType).replace(/\\n/g, '\n');
+    navigator.clipboard.writeText(text).then(() => {
+      alert('✓ Receipt summary copied to clipboard!');
+    });
+  });
+}
+
+if (btnShareWhatsapp) {
+  btnShareWhatsapp.addEventListener('click', () => {
+    if (!currentReceiptTrip) return;
+    const text = generateReceiptTextManifest(currentReceiptTrip, currentReceiptType).replace(/\\n/g, '\n');
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  });
+}
+
+// ==================== TRIP SETTLEMENT LINKING ====================
+window.settleTripPayment = function(tripId) {
+  const sd = getStoreData();
+  if (!sd) return;
+  const trip = sd.trips.find(t => t.id === tripId);
+  if (!trip) return;
+
+  const rev = trip.dispatchData.reduce((sum, d) => {
+    const r = trip.returnData.find(x => x.productId === d.productId) || { sold: 0 };
+    return sum + (r.sold * d.price);
+  }, 0);
+
+  const paid = sd.payments
+    .filter(p => p.tripId === trip.id || (p.note && p.note.includes(trip.id)))
+    .reduce((sum, p) => sum + (p.type === 'credit' ? 0 : p.amount), 0);
+
+  const balance = Math.max(0, rev - paid);
+
+  // Switch to payments tab & sub-tab tx
+  document.querySelector('.tab-btn[data-tab="payments"]').click();
+  btnSubtabTx?.click();
+
+  // Pre-fill payment form
+  if (payDateInput) payDateInput.value = new Date().toISOString().split('T')[0];
+  if (payPartyInput) payPartyInput.value = trip.driverName;
+  if (payTypeSelect) payTypeSelect.value = 'cash';
+  if (payAmountInput) payAmountInput.value = balance.toFixed(2);
+  if (payNoteInput) payNoteInput.value = `Settlement for Trip ${trip.id}`;
+
+  payAmountInput?.focus();
+};
+
+// ==================== CREDIT & RECEIVABLES LEDGER ====================
+if (btnSubtabTx && btnSubtabLedger) {
+  btnSubtabTx.addEventListener('click', () => {
+    btnSubtabTx.classList.add('active');
+    btnSubtabLedger.classList.remove('active');
+    subtabPaneTx.classList.remove('d-none');
+    subtabPaneLedger.classList.add('d-none');
+  });
+
+  btnSubtabLedger.addEventListener('click', () => {
+    btnSubtabLedger.classList.add('active');
+    btnSubtabTx.classList.remove('active');
+    subtabPaneLedger.classList.remove('d-none');
+    subtabPaneTx.classList.add('d-none');
+    renderCreditLedger();
+  });
+}
+
+function renderCreditLedger() {
+  const sd = getStoreData();
+  if (!sd || !ledgerTableBody) return;
+
+  // Aggregate by party name
+  const ledgerMap = {};
+
+  // 1. Incurred from completed trips
+  sd.trips.forEach(t => {
+    if (t.status === 'completed') {
+      const party = t.driverName.trim();
+      if (!ledgerMap[party]) {
+        ledgerMap[party] = { party, role: 'Driver', incurred: 0, paid: 0, trips: 0 };
+      }
+      const tripRev = t.dispatchData.reduce((sum, d) => {
+        const r = t.returnData.find(x => x.productId === d.productId) || { sold: 0 };
+        return sum + (r.sold * d.price);
+      }, 0);
+      ledgerMap[party].incurred += tripRev;
+      ledgerMap[party].trips += 1;
+    }
+  });
+
+  // 2. Incurred from credit payments + Paid from cash/transfer
+  sd.payments.forEach(p => {
+    const party = p.party.trim();
+    if (!ledgerMap[party]) {
+      const isDriver = sd.drivers.some(d => d.name.toLowerCase() === party.toLowerCase());
+      ledgerMap[party] = { party, role: isDriver ? 'Driver' : 'Customer', incurred: 0, paid: 0, trips: 0 };
+    }
+    if (p.type === 'credit') {
+      ledgerMap[party].incurred += p.amount;
+    } else {
+      ledgerMap[party].paid += p.amount;
+    }
+  });
+
+  const parties = Object.values(ledgerMap);
+  const query = (ledgerSearchInput ? ledgerSearchInput.value : '').toLowerCase().trim();
+
+  let totalOutstanding = 0;
+  let openCreditCount = 0;
+  let totalCollected = 0;
+
+  ledgerTableBody.innerHTML = '';
+
+  parties.forEach(entry => {
+    const balance = Math.max(0, entry.incurred - entry.paid);
+    totalCollected += entry.paid;
+    if (balance > 0) {
+      totalOutstanding += balance;
+      openCreditCount += 1;
+    }
+
+    if (query && !entry.party.toLowerCase().includes(query) && !entry.role.toLowerCase().includes(query)) {
+      return;
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${entry.party}</strong></td>
+      <td><span class="badge ${entry.role === 'Driver' ? 'badge-info' : 'badge-secondary'}">${entry.role}</span></td>
+      <td class="text-right">ETB ${entry.incurred.toFixed(2)}</td>
+      <td class="text-right">ETB ${entry.paid.toFixed(2)}</td>
+      <td class="text-right" style="color:${balance > 0 ? 'var(--danger)' : 'var(--accent)'}; font-weight:700;">
+        ETB ${balance.toFixed(2)}
+      </td>
+      <td>
+        ${balance > 0 
+          ? `<span class="badge badge-danger">Due: ETB ${balance.toFixed(0)}</span>`
+          : `<span class="badge badge-success">Clear</span>`
+        }
+      </td>
+      <td class="text-center keeper-only">
+        ${balance > 0 ? `
+          <button class="btn btn-primary btn-xs" onclick="collectPartyPayment('${entry.party.replace(/'/g, "\\'")}', ${balance})">Collect Payment</button>
+        ` : `<span class="text-secondary" style="font-size:0.8rem">All Clear</span>`}
+      </td>
+    `;
+    ledgerTableBody.appendChild(tr);
+  });
+
+  if (ledgerTotalOutstanding) ledgerTotalOutstanding.textContent = `ETB ${totalOutstanding.toFixed(2)}`;
+  if (ledgerPartiesCount) ledgerPartiesCount.textContent = openCreditCount;
+  if (ledgerTotalCollected) ledgerTotalCollected.textContent = `ETB ${totalCollected.toFixed(2)}`;
+}
+
+window.collectPartyPayment = function(party, balance) {
+  btnSubtabTx?.click();
+  if (payDateInput) payDateInput.value = new Date().toISOString().split('T')[0];
+  if (payPartyInput) payPartyInput.value = party;
+  if (payTypeSelect) payTypeSelect.value = 'cash';
+  if (payAmountInput) payAmountInput.value = balance.toFixed(2);
+  if (payNoteInput) payNoteInput.value = `Credit collection payment for ${party}`;
+  payAmountInput?.focus();
+};
+
+window.exportLedgerCSV = function() {
+  const sd = getStoreData();
+  if (!sd) return;
+  const ledgerMap = {};
+  sd.trips.forEach(t => {
+    if (t.status === 'completed') {
+      const party = t.driverName.trim();
+      if (!ledgerMap[party]) ledgerMap[party] = { party, role: 'Driver', incurred: 0, paid: 0 };
+      const rev = t.dispatchData.reduce((sum, d) => {
+        const r = t.returnData.find(x => x.productId === d.productId) || { sold: 0 };
+        return sum + (r.sold * d.price);
+      }, 0);
+      ledgerMap[party].incurred += rev;
+    }
+  });
+  sd.payments.forEach(p => {
+    const party = p.party.trim();
+    if (!ledgerMap[party]) ledgerMap[party] = { party, role: 'Customer', incurred: 0, paid: 0 };
+    if (p.type === 'credit') ledgerMap[party].incurred += p.amount;
+    else ledgerMap[party].paid += p.amount;
+  });
+
+  const header = ['Party', 'Role', 'Total Incurred (ETB)', 'Total Paid (ETB)', 'Balance Due (ETB)', 'Status'];
+  const rows = Object.values(ledgerMap).map(e => {
+    const bal = Math.max(0, e.incurred - e.paid);
+    return [e.party, e.role, e.incurred.toFixed(2), e.paid.toFixed(2), bal.toFixed(2), bal > 0 ? 'Due' : 'Clear'];
+  });
+  const csv = [header, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `credit_ledger_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', initAuth);
