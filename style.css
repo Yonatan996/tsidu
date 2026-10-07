@@ -1036,54 +1036,7 @@ body.role-owner .keeper-only {
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
 }
 
-/* ===== BARCODE / QR SCANNER ===== */
-.scanner-container {
-  position: relative;
-  width: 100%;
-  max-width: 440px;
-  margin: 0 auto 16px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: #090d16;
-  aspect-ratio: 4 / 3;
-  border: 1px solid var(--border-glass);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-.scanner-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.scanner-viewport-box {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 72%;
-  height: 60%;
-  border: 2px solid rgba(99, 102, 241, 0.85);
-  border-radius: 12px;
-  box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.55);
-  pointer-events: none;
-}
-
-.scanner-laser {
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  height: 2px;
-  background: #ef4444;
-  box-shadow: 0 0 8px #ef4444, 0 0 14px #ef4444;
-  top: 0;
-  animation: scanLaser 2.2s infinite ease-in-out;
-}
-
-@keyframes scanLaser {
-  0% { top: 6%; opacity: 0.3; }
-  50% { top: 92%; opacity: 1; }
+50% { top: 92%; opacity: 1; }
   100% { top: 6%; opacity: 0.3; }
 }
 
@@ -1238,64 +1191,126 @@ body.role-owner .keeper-only {
   flex-wrap: wrap;
 }
 
-/* ===== PRINT MEDIA STYLES ===== */
-@media print {
-  body {
-    background: #ffffff !important;
-    color: #000000 !important;
-  }
-  
-  /* Hide all app UI elements */
-  header,
-  .tabs-bar,
-  .main-container > *:not(#receipt-modal),
-  .dashboard-grid,
-  .card,
-  .metrics-row,
-  .btn,
-  #receipt-modal .modal-header,
-  #receipt-modal .receipt-actions-bar,
-  .modal-overlay:not(#receipt-modal) {
-    display: none !important;
-  }
-
-  body * {
-    visibility: hidden;
-  }
-
-  #receipt-modal,
-  #receipt-modal * {
-    visibility: visible;
-  }
-
-  #receipt-modal {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    background: transparent !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    z-index: 99999;
-  }
-
-  #receipt-modal .modal-content {
-    background: #ffffff !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    max-width: 100% !important;
-    max-height: none !important;
-    overflow: visible !important;
-    animation: none !important;
-  }
-
-  .receipt-document {
-    box-shadow: none !important;
-    border: none !important;
-    padding: 10px 0 !important;
-    max-width: 100% !important;
-  }
+/* ===== VISUAL GLASS ANALYTICS & DASHBOARDS ===== */
+.chart-card {
+  position: relative;
+  overflow: hidden;
 }
+
+.chart-bars-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  height: 140px;
+  padding-top: 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.chart-bar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.chart-bar-val {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.chart-bar-pillar {
+  width: 100%;
+  max-width: 32px;
+  min-height: 4px;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.9) 0%, rgba(99, 102, 241, 0.25) 100%);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.chart-bar-pillar:hover {
+  background: linear-gradient(180deg, #818cf8 0%, rgba(99, 102, 241, 0.5) 100%);
+  box-shadow: 0 0 18px rgba(129, 140, 248, 0.7);
+  transform: translateY(-2px);
+}
+
+.chart-bar-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* Top Products Ranking Progress Bars */
+.rank-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background var(--transition);
+}
+
+.rank-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rank-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.rank-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--primary-light);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.rank-badge.top-1 { background: rgba(234, 179, 8, 0.25); color: #facc15; border-color: rgba(234, 179, 8, 0.5); }
+.rank-badge.top-2 { background: rgba(148, 163, 184, 0.25); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.5); }
+.rank-badge.top-3 { background: rgba(217, 119, 6, 0.25); color: #fb923c; border-color: rgba(217, 119, 6, 0.5); }
+
+.rank-progress-bg {
+  width: 100%;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.rank-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #6366f1 0%, #10b981 100%);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  transition: width 0.6s ease-out;
+}
+

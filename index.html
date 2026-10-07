@@ -179,6 +179,56 @@
             <span class="metric-value" id="ov-lowstock">0</span>
           </div>
         </div>
+
+        <!-- VISUAL GLASS ANALYTICS & DASHBOARDS -->
+        <div class="dashboard-grid two-col" style="margin-bottom:24px;">
+          <!-- Revenue Trend Chart -->
+          <div class="card chart-card">
+            <div class="flex justify-between align-center" style="margin-bottom:14px;">
+              <h2 class="card-title" style="margin-bottom:0">Daily Revenue Trends</h2>
+              <span class="badge badge-info" style="font-size:0.72rem">Last 7 Days</span>
+            </div>
+            <div id="chart-revenue-container" style="min-height:180px; display:flex; flex-direction:column; justify-content:flex-end;">
+              <!-- Dynamic SVG/Bars Chart -->
+            </div>
+          </div>
+
+          <!-- Top 5 Best-Selling Products -->
+          <div class="card chart-card">
+            <div class="flex justify-between align-center" style="margin-bottom:14px;">
+              <h2 class="card-title" style="margin-bottom:0">Top 5 Best-Selling Products</h2>
+              <span class="badge badge-success" style="font-size:0.72rem">By Revenue</span>
+            </div>
+            <div id="top-products-list" class="flex flex-col gap-2">
+              <!-- Dynamic ranking progress bars -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Driver Fleet Performance -->
+        <div class="card" style="margin-bottom:24px;">
+          <div class="flex justify-between align-center" style="margin-bottom:14px;">
+            <h2 class="card-title" style="margin-bottom:0">Driver Fleet Performance</h2>
+            <span class="text-secondary" style="font-size:0.8rem">Sales volume & return rates</span>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Driver Name</th>
+                  <th>Trips Completed</th>
+                  <th class="text-right">Total Units Sold</th>
+                  <th class="text-right">Gross Revenue (ETB)</th>
+                  <th class="text-right">Return Rate</th>
+                  <th>Performance</th>
+                </tr>
+              </thead>
+              <tbody id="driver-performance-body">
+                <!-- Injected dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
         <div class="card">
           <h2 class="card-title">Recent Trip Activity</h2>
           <div class="table-responsive">
@@ -217,6 +267,10 @@
                   <label for="product-price">Unit Price (ETB)</label>
                   <input type="number" id="product-price" class="input-control" required min="0" step="0.01" placeholder="0.00">
                 </div>
+                <div class="form-group">
+                  <label for="product-min-stock">Min Stock Alert Level <span class="text-secondary" style="font-size:0.75rem">(reorder point)</span></label>
+                  <input type="number" id="product-min-stock" class="input-control" min="0" value="10" placeholder="10">
+                </div>
                 <div class="flex gap-2">
                   <button type="submit" id="btn-save-product" class="btn btn-primary" style="flex:1">Save Product</button>
                   <button type="button" id="btn-cancel-edit" class="btn btn-secondary d-none">Cancel</button>
@@ -230,13 +284,12 @@
               <div class="flex justify-between align-center" style="margin-bottom:16px;">
                 <h2 class="card-title" style="margin-bottom:0">Store Stock Levels</h2>
                 <div class="flex gap-2 align-center">
-                  <button type="button" id="btn-scan-stock" class="btn btn-glass btn-sm keeper-only" title="Scan Barcode to Find / Edit Product">📷 Scan Barcode</button>
                   <input type="search" id="inventory-search" class="input-control input-sm search-glass" style="max-width:220px;" placeholder="🔍 Search stock...">
                 </div>
               </div>
               <div class="table-responsive">
                 <table>
-                  <thead><tr><th>SKU</th><th>Product Name</th><th class="text-right">Price (ETB)</th><th class="text-right">Stock</th><th>Status</th><th class="text-center keeper-only">Actions</th></tr></thead>
+                  <thead><tr><th>SKU</th><th>Product Name</th><th class="text-right">Price (ETB)</th><th class="text-right">Stock</th><th class="text-right">Min Alert</th><th>Status</th><th class="text-center keeper-only">Actions</th></tr></thead>
                   <tbody id="inventory-table-body"></tbody>
                 </table>
               </div>
@@ -301,7 +354,6 @@
               <div class="flex justify-between align-center" style="margin-bottom:12px;">
                 <h3 style="font-size:0.9rem;font-weight:600;color:var(--text-secondary)">Products to Dispatch</h3>
                 <div class="quick-actions-bar" style="margin-bottom:0;">
-                  <button type="button" class="btn btn-glass btn-xs" id="btn-scan-dispatch">📷 Scan Barcode</button>
                   <button type="button" class="btn btn-glass btn-xs" id="btn-dispatch-fill-max">⚡ Fill Max Stock</button>
                   <button type="button" class="btn btn-glass btn-xs" id="btn-dispatch-clear">✕ Clear All</button>
                 </div>
@@ -727,13 +779,13 @@
   </div>
 </div>
 
-<!-- PRINTABLE / SHAREABLE RECEIPT MODAL -->
+<!-- SHAREABLE RECEIPT MODAL -->
 <div id="receipt-modal" class="modal-overlay d-none">
   <div class="modal-content" style="max-width:700px;">
     <div class="modal-header">
       <div class="modal-title">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Trip Waybill & Receipt
+        Trip Manifest & Shareable Receipt
       </div>
       <button type="button" class="btn-close" id="btn-close-receipt-modal" title="Close">&times;</button>
     </div>
@@ -747,7 +799,6 @@
     <div class="receipt-actions-bar">
       <button type="button" class="btn btn-glass btn-sm" id="btn-copy-receipt-text">📋 Copy Summary</button>
       <button type="button" class="btn btn-success btn-sm" id="btn-share-whatsapp">💬 Share via WhatsApp</button>
-      <button type="button" class="btn btn-primary btn-sm" id="btn-print-receipt">🖨️ Print / Save PDF</button>
       <button type="button" class="btn btn-secondary btn-sm" id="btn-close-receipt-bottom">Close</button>
     </div>
   </div>
