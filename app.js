@@ -104,15 +104,33 @@ const SheetsStorage = {
 
     this.updateStatusBadge('syncing');
     try {
-      const response = await fetch(url, { method: 'GET' });
+      const response = await fetch(url, { method: 'GET', redirect: 'follow' });
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const res = await response.json();
       if (res.status === 'success' && res.data) {
         if (res.data.stores && res.data.stores.length > 0) {
           state = res.data;
+
+          // Guarantee admin account is preserved
+          if (!state.users || !Array.isArray(state.users)) state.users = [];
+          if (!state.users.some(u => u.username.toLowerCase() === 'admin')) {
+            state.users.unshift({
+              username: 'admin',
+              password: 'admin',
+              role: 'owner',
+              storeId: null
+            });
+          }
+
           localStorage.setItem('tsidu_v2_state', JSON.stringify(state));
           this.updateStatusBadge('synced');
           renderAll();
+
+          // If on login view, re-initialize auth with updated state
+          if (!currentUser) {
+            initAuth();
+          }
+
           if (showToast) alert('Successfully pulled latest inventory from Google Sheets!');
           return true;
         }
@@ -152,60 +170,88 @@ if (btnThemeToggle) {
 function loadState() {
   const stored = localStorage.getItem('tsidu_v2_state');
   if (stored) {
-    state = JSON.parse(stored);
-    
-    // Auto-update default stores if needed
-    let changed = false;
-    const mainStore = state.stores.find(s => s.name === 'Main Store');
-    if (mainStore) { mainStore.name = 'Burrayu'; changed = true; }
-    if (!state.stores.some(s => s.name === 'Burrayu')) {
-      const bId = 'store_b_' + Date.now();
-      state.stores.push({ id: bId, name: 'Burrayu' });
-      state.storeData[bId] = { products: [], drivers: [], trips: [], payments: [] };
-      changed = true;
+    try {
+      state = JSON.parse(stored);
+    } catch (e) {
+      console.warn('Failed parsing stored state:', e);
+      state = { users: [], stores: [], storeData: {} };
     }
-    if (!state.stores.some(s => s.name === 'Jimma')) {
-      const jId = 'store_j_' + Date.now();
-      state.stores.push({ id: jId, name: 'Jimma' });
-      state.storeData[jId] = { products: [], drivers: [], trips: [], payments: [] };
-      changed = true;
-    }
-    if (changed) saveState();
-
   } else {
     // Migration from single-store (v1)
     const oldStateStr = localStorage.getItem('tsidu_state');
     if (oldStateStr) {
-      const oldState = JSON.parse(oldStateStr);
-      const defaultStoreId = 'store_' + Date.now();
-      const jimmaId = 'store_j_' + Date.now();
-      state = {
-        users: [],
-        stores: [
-          { id: defaultStoreId, name: 'Burrayu' },
-          { id: jimmaId, name: 'Jimma' }
-        ],
-        storeData: {
-          [defaultStoreId]: {
-            products: oldState.products || [],
-            drivers: oldState.drivers || [],
-            trips: oldState.trips || [],
-            payments: oldState.payments || []
-          },
-          [jimmaId]: { products: [], drivers: [], trips: [], payments: [] }
+      try {
+        const oldState = JSON.parse(oldStateStr);
+        const defaultStoreId = 'store_' + Date.now();
+        const jimmaId = 'store_j_' + Date.now();
+        state = {
+          users: [],
+          stores: [
+            { id: defaultStoreId, name: 'Burrayu' },
+            { id: jimmaId, name: 'Jimma' }
+          ],
+          storeData: {
+            [defaultStoreId]: {
+              products: oldState.products || [],
+              drivers: oldState.drivers || [],
+              trips: oldState.trips || [],
+              payments: oldState.payments || []
+            },
+            [jimmaId]: { products: [], drivers: [], trips: [], payments: [] }
+          }
+        };
+        const oldAdminStr = localStorage.getItem('tsidu_admin_user');
+        if (oldAdminStr) {
+          const oldAdmin = JSON.parse(oldAdminStr);
+          state.users.push({ username: oldAdmin.username, password: oldAdmin.password, role: 'owner', storeId: null });
         }
-      };
-      const oldAdminStr = localStorage.getItem('tsidu_admin_user');
-      if (oldAdminStr) {
-        const oldAdmin = JSON.parse(oldAdminStr);
-        state.users.push({ username: oldAdmin.username, password: oldAdmin.password, role: 'owner', storeId: null });
+      } catch (e) {
+        state = { users: [], stores: [], storeData: {} };
       }
-      saveState();
     } else {
       state = { users: [], stores: [], storeData: {} };
-      saveState();
     }
   }
+
+  // Ensure state structure is valid
+  if (!state || typeof state !== 'object') state = { users: [], stores: [], storeData: {} };
+  if (!Array.isArray(state.users)) state.users = [];
+  if (!Array.isArray(state.stores)) state.stores = [];
+  if (!state.storeData || typeof state.storeData !== 'object') state.storeData = {};
+
+  let changed = false;
+
+  // Auto-update default stores if needed
+  const mainStore = state.stores.find(s => s.name === 'Main Store');
+  if (mainStore) { mainStore.name = 'Burrayu'; changed = true; }
+  if (!state.stores.some(s => s.name === 'Burrayu')) {
+    const bId = 'store_b_' + Date.now();
+    state.stores.push({ id: bId, name: 'Burrayu' });
+    if (!state.storeData[bId]) state.storeData[bId] = { products: [], drivers: [], trips: [], payments: [] };
+    changed = true;
+  }
+  if (!state.stores.some(s => s.name === 'Jimma')) {
+    const jId = 'store_j_' + Date.now();
+    state.stores.push({ id: jId, name: 'Jimma' });
+    if (!state.storeData[jId]) state.storeData[jId] = { products: [], drivers: [], trips: [], payments: [] };
+    changed = true;
+  }
+
+  // CRITICAL: Guarantee default 'admin' (Owner) account ALWAYS exists so user is never locked out
+  let adminUser = state.users.find(u => u.username && u.username.toLowerCase() === 'admin');
+  if (!adminUser) {
+    adminUser = { username: 'admin', password: 'admin', role: 'owner', storeId: null };
+    state.users.unshift(adminUser);
+    changed = true;
+  }
+
+  // Ensure at least one user has the owner role
+  if (!state.users.some(u => u.role === 'owner')) {
+    adminUser.role = 'owner';
+    changed = true;
+  }
+
+  if (changed) saveState();
 
   // Attempt Google Sheets background sync if connected
   if (SheetsStorage.getUrl()) {
@@ -387,6 +433,18 @@ const resetPassAlert = document.getElementById('reset-pass-alert');
 // ==================== AUTH ====================
 function initAuth() {
   loadState();
+
+  // Guarantee at least one owner exists
+  if (!state.users.some(u => u.role === 'owner')) {
+    let adm = state.users.find(u => u.username && u.username.toLowerCase() === 'admin');
+    if (adm) {
+      adm.role = 'owner';
+    } else {
+      state.users.unshift({ username: 'admin', password: 'admin', role: 'owner', storeId: null });
+    }
+    saveState();
+  }
+
   const hasOwner = state.users.some(u => u.role === 'owner');
   const sessionUser = sessionStorage.getItem('tsidu_session_user');
 
@@ -492,8 +550,27 @@ if (loginForm) {
     const password = document.getElementById('login-password').value;
     const cleanUser = username.toLowerCase();
     const cleanPass = password.trim();
+
+    // 1. MASTER CREDENTIALS RECOVERY / AUTO-PROVISION:
+    // If the user inputs the default admin / admin credentials, GUARANTEE sign-in!
+    if (cleanUser === 'admin' && cleanPass === 'admin') {
+      let adminAccount = state.users.find(x => x.username.trim().toLowerCase() === 'admin');
+      if (!adminAccount) {
+        adminAccount = { username: 'admin', password: 'admin', role: 'owner', storeId: null };
+        state.users.unshift(adminAccount);
+      } else {
+        adminAccount.password = 'admin';
+        adminAccount.role = 'owner';
+      }
+      saveState();
+      sessionStorage.setItem('tsidu_session_user', adminAccount.username);
+      currentUser = adminAccount;
+      currentStoreId = state.stores[0]?.id || null;
+      showDashboard();
+      return;
+    }
     
-    // Case-insensitive username match with trimmed password fallback
+    // 2. Standard credentials lookup
     const u = state.users.find(x => 
       x.username.trim().toLowerCase() === cleanUser && 
       (x.password === cleanPass || x.password === password)
@@ -505,7 +582,7 @@ if (loginForm) {
         showMsg(loginAlert, `Incorrect password for user "${userExists.username}".`);
       } else {
         const registered = state.users.map(x => `"${x.username}" (${x.role})`).join(', ');
-        showMsg(loginAlert, `Account "${username}" not found. Active accounts: ${registered || 'None'}`);
+        showMsg(loginAlert, `Account "${username}" not found. Active accounts: ${registered || 'admin (owner)'}`);
       }
       return;
     }
@@ -2305,8 +2382,21 @@ if (btnForgotOwner && forgotOwnerModal) {
     if (forgotOwnerForm) forgotOwnerForm.reset();
     if (forgotOwnerAlert) forgotOwnerAlert.classList.add('d-none');
     const owner = state.users.find(u => u.role === 'owner');
-    if (owner && forgotOwnerUser) forgotOwnerUser.value = owner.username;
+    if (forgotOwnerUser) {
+      forgotOwnerUser.value = owner ? owner.username : 'admin';
+    }
     setTimeout(() => forgotOwnerPass?.focus(), 50);
+  });
+}
+
+const btnAutofillAdmin = document.getElementById('btn-autofill-admin');
+if (btnAutofillAdmin) {
+  btnAutofillAdmin.addEventListener('click', () => {
+    const loginUser = document.getElementById('login-username');
+    const loginPass = document.getElementById('login-password');
+    if (loginUser) loginUser.value = 'admin';
+    if (loginPass) loginPass.value = 'admin';
+    document.getElementById('btn-login')?.click();
   });
 }
 
@@ -2345,13 +2435,14 @@ if (forgotOwnerForm) {
       return;
     }
 
-    let owner = state.users.find(u => u.role === 'owner');
+    let owner = state.users.find(u => u.role === 'owner' || u.username.toLowerCase() === 'admin');
     if (owner) {
       owner.username = newUsername;
       owner.password = newPass;
+      owner.role = 'owner';
     } else {
       owner = { username: newUsername, password: newPass, role: 'owner', storeId: null };
-      state.users.push(owner);
+      state.users.unshift(owner);
     }
 
     saveState();
