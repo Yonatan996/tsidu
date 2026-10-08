@@ -1036,10 +1036,6 @@ body.role-owner .keeper-only {
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
 }
 
-50% { top: 92%; opacity: 1; }
-  100% { top: 6%; opacity: 0.3; }
-}
-
 /* ===== PRINTABLE / SHAREABLE RECEIPTS ===== */
 .receipt-document {
   background: #ffffff;

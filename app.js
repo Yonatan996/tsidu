@@ -111,7 +111,7 @@ const SheetsStorage = {
         if (res.data.stores && res.data.stores.length > 0) {
           state = res.data;
 
-          // Guarantee admin account is preserved
+          // Guarantee admin account is preserved in memory from cloud
           if (!state.users || !Array.isArray(state.users)) state.users = [];
           if (!state.users.some(u => u.username.toLowerCase() === 'admin')) {
             state.users.unshift({
@@ -122,7 +122,15 @@ const SheetsStorage = {
             });
           }
 
-          localStorage.setItem('tsidu_v2_state', JSON.stringify(state));
+          // Cache stores and products locally (never credentials for multi-device security)
+          try {
+            const offlineCache = {
+              stores: state.stores || [],
+              storeData: state.storeData || {}
+            };
+            localStorage.setItem('tsidu_v2_state', JSON.stringify(offlineCache));
+          } catch (e) {}
+
           this.updateStatusBadge('synced');
           renderAll();
 
@@ -168,60 +176,22 @@ if (btnThemeToggle) {
 
 // ==================== STATE LOADING & PERSISTENCE ====================
 function loadState() {
+  // Load operational cache (stores & products), NEVER rely on localStorage for credentials
   const stored = localStorage.getItem('tsidu_v2_state');
   if (stored) {
     try {
-      state = JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      state.stores = Array.isArray(parsed.stores) ? parsed.stores : [];
+      state.storeData = (parsed.storeData && typeof parsed.storeData === 'object') ? parsed.storeData : {};
     } catch (e) {
       console.warn('Failed parsing stored state:', e);
-      state = { users: [], stores: [], storeData: {} };
-    }
-  } else {
-    // Migration from single-store (v1)
-    const oldStateStr = localStorage.getItem('tsidu_state');
-    if (oldStateStr) {
-      try {
-        const oldState = JSON.parse(oldStateStr);
-        const defaultStoreId = 'store_' + Date.now();
-        const jimmaId = 'store_j_' + Date.now();
-        state = {
-          users: [],
-          stores: [
-            { id: defaultStoreId, name: 'Burrayu' },
-            { id: jimmaId, name: 'Jimma' }
-          ],
-          storeData: {
-            [defaultStoreId]: {
-              products: oldState.products || [],
-              drivers: oldState.drivers || [],
-              trips: oldState.trips || [],
-              payments: oldState.payments || []
-            },
-            [jimmaId]: { products: [], drivers: [], trips: [], payments: [] }
-          }
-        };
-        const oldAdminStr = localStorage.getItem('tsidu_admin_user');
-        if (oldAdminStr) {
-          const oldAdmin = JSON.parse(oldAdminStr);
-          state.users.push({ username: oldAdmin.username, password: oldAdmin.password, role: 'owner', storeId: null });
-        }
-      } catch (e) {
-        state = { users: [], stores: [], storeData: {} };
-      }
-    } else {
-      state = { users: [], stores: [], storeData: {} };
+      state.stores = [];
+      state.storeData = {};
     }
   }
 
-  // Ensure state structure is valid
-  if (!state || typeof state !== 'object') state = { users: [], stores: [], storeData: {} };
-  if (!Array.isArray(state.users)) state.users = [];
-  if (!Array.isArray(state.stores)) state.stores = [];
-  if (!state.storeData || typeof state.storeData !== 'object') state.storeData = {};
-
+  // Ensure default stores exist
   let changed = false;
-
-  // Auto-update default stores if needed
   const mainStore = state.stores.find(s => s.name === 'Main Store');
   if (mainStore) { mainStore.name = 'Burrayu'; changed = true; }
   if (!state.stores.some(s => s.name === 'Burrayu')) {
@@ -237,23 +207,20 @@ function loadState() {
     changed = true;
   }
 
-  // CRITICAL: Guarantee default 'admin' (Owner) account ALWAYS exists so user is never locked out
-  let adminUser = state.users.find(u => u.username && u.username.toLowerCase() === 'admin');
-  if (!adminUser) {
-    adminUser = { username: 'admin', password: 'admin', role: 'owner', storeId: null };
-    state.users.unshift(adminUser);
-    changed = true;
-  }
-
-  // Ensure at least one user has the owner role
-  if (!state.users.some(u => u.role === 'owner')) {
-    adminUser.role = 'owner';
-    changed = true;
+  // Default owner in memory pending cloud pull
+  if (!state.users || !Array.isArray(state.users)) state.users = [];
+  if (!state.users.some(u => u.username && u.username.toLowerCase() === 'admin')) {
+    state.users.unshift({
+      username: 'admin',
+      password: 'admin',
+      role: 'owner',
+      storeId: null
+    });
   }
 
   if (changed) saveState();
 
-  // Attempt Google Sheets background sync if connected
+  // Multi-device cloud sync: authoritatively pull live users & inventory from Google Sheets
   if (SheetsStorage.getUrl()) {
     SheetsStorage.pullFromSheets();
   } else {
@@ -261,9 +228,23 @@ function loadState() {
   }
 }
 
-function saveState() {
-  localStorage.setItem('tsidu_v2_state', JSON.stringify(state));
-  SheetsStorage.debounceSync();
+function saveState(pushImmediately = false) {
+  // Save local cache WITHOUT credentials for security & multi-device consistency
+  try {
+    const offlineCache = {
+      stores: state.stores || [],
+      storeData: state.storeData || {}
+    };
+    localStorage.setItem('tsidu_v2_state', JSON.stringify(offlineCache));
+  } catch (e) {
+    console.warn('Failed caching state locally:', e);
+  }
+
+  if (pushImmediately) {
+    SheetsStorage.pushToSheets();
+  } else {
+    SheetsStorage.debounceSync();
+  }
 }
 
 function getStoreData() {
@@ -434,39 +415,21 @@ const resetPassAlert = document.getElementById('reset-pass-alert');
 function initAuth() {
   loadState();
 
-  // Guarantee at least one owner exists
-  if (!state.users.some(u => u.role === 'owner')) {
-    let adm = state.users.find(u => u.username && u.username.toLowerCase() === 'admin');
-    if (adm) {
-      adm.role = 'owner';
-    } else {
-      state.users.unshift({ username: 'admin', password: 'admin', role: 'owner', storeId: null });
-    }
-    saveState();
-  }
+  // Multi-device guarantee: Always display the login card
+  if (setupCard) setupCard.classList.add('d-none');
+  if (loginCard) loginCard.classList.remove('d-none');
 
-  const hasOwner = state.users.some(u => u.role === 'owner');
   const sessionUser = sessionStorage.getItem('tsidu_session_user');
-
-  if (!hasOwner) {
-    setupCard.classList.remove('d-none');
-    loginCard.classList.add('d-none');
-  } else {
-    setupCard.classList.add('d-none');
-    loginCard.classList.remove('d-none');
-  }
-
-  if (sessionUser) {
+  if (sessionUser && state.users && state.users.length > 0) {
     const u = state.users.find(x => x.username.trim().toLowerCase() === sessionUser.trim().toLowerCase());
     if (u) {
       currentUser = u;
       showDashboard();
-    } else {
-      showAuth();
+      return;
     }
-  } else {
-    showAuth();
   }
+
+  showAuth();
 }
 
 function showAuth() {
@@ -516,7 +479,7 @@ function showMsg(el, msg, success = false) {
 }
 
 if (setupForm) {
-  setupForm.addEventListener('submit', e => {
+  setupForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const username = document.getElementById('setup-username').value.trim();
     const password = document.getElementById('setup-password').value;
@@ -534,7 +497,7 @@ if (setupForm) {
     
     const owner = { username, password, role: 'owner', storeId: null };
     state.users.push(owner);
-    saveState();
+    saveState(true);
     
     sessionStorage.setItem('tsidu_session_user', username);
     currentUser = owner;
@@ -544,53 +507,73 @@ if (setupForm) {
 }
 
 if (loginForm) {
-  loginForm.addEventListener('submit', e => {
+  loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const username = document.getElementById('login-username').value.trim();
-    const password = document.getElementById('login-password').value;
+    const usernameInput = document.getElementById('login-username');
+    const passwordInput = document.getElementById('login-password');
+    const btnLogin = document.getElementById('btn-login');
+    const username = (usernameInput?.value || '').trim();
+    const password = passwordInput?.value || '';
     const cleanUser = username.toLowerCase();
     const cleanPass = password.trim();
 
-    // 1. MASTER CREDENTIALS RECOVERY / AUTO-PROVISION:
-    // If the user inputs the default admin / admin credentials, GUARANTEE sign-in!
-    if (cleanUser === 'admin' && cleanPass === 'admin') {
-      let adminAccount = state.users.find(x => x.username.trim().toLowerCase() === 'admin');
-      if (!adminAccount) {
-        adminAccount = { username: 'admin', password: 'admin', role: 'owner', storeId: null };
-        state.users.unshift(adminAccount);
-      } else {
-        adminAccount.password = 'admin';
-        adminAccount.role = 'owner';
+    if (!cleanUser || !cleanPass) {
+      showMsg(loginAlert, 'Invalid username or password.');
+      return;
+    }
+
+    const origBtnText = btnLogin ? btnLogin.textContent : 'Sign In';
+    if (btnLogin) {
+      btnLogin.disabled = true;
+      btnLogin.textContent = 'Verifying...';
+    }
+
+    try {
+      // 1. Check in-memory state first
+      let u = state.users.find(x => 
+        x.username.trim().toLowerCase() === cleanUser && 
+        (x.password === cleanPass || x.password === password)
+      );
+
+      // 2. Multi-device verification: fetch live authoritative accounts from Google Sheets if needed
+      if (!u && SheetsStorage.getUrl()) {
+        await SheetsStorage.pullFromSheets();
+        u = state.users.find(x => 
+          x.username.trim().toLowerCase() === cleanUser && 
+          (x.password === cleanPass || x.password === password)
+        );
       }
-      saveState();
-      sessionStorage.setItem('tsidu_session_user', adminAccount.username);
-      currentUser = adminAccount;
-      currentStoreId = state.stores[0]?.id || null;
+
+      // 3. Fallback check for default admin
+      if (!u && cleanUser === 'admin' && cleanPass === 'admin') {
+        let adminAccount = state.users.find(x => x.username.trim().toLowerCase() === 'admin');
+        if (!adminAccount) {
+          adminAccount = { username: 'admin', password: 'admin', role: 'owner', storeId: null };
+          state.users.unshift(adminAccount);
+        } else {
+          adminAccount.password = 'admin';
+          adminAccount.role = 'owner';
+        }
+        saveState(true);
+        u = adminAccount;
+      }
+
+      if (!u) {
+        showMsg(loginAlert, 'Invalid username or password.');
+        return;
+      }
+
+      // Success: Save active session user in sessionStorage (never persistent credentials in localStorage)
+      sessionStorage.setItem('tsidu_session_user', u.username);
+      currentUser = u;
+      currentStoreId = u.role === 'owner' ? (state.stores[0]?.id || null) : u.storeId;
       showDashboard();
-      return;
-    }
-    
-    // 2. Standard credentials lookup
-    const u = state.users.find(x => 
-      x.username.trim().toLowerCase() === cleanUser && 
-      (x.password === cleanPass || x.password === password)
-    );
-
-    if (!u) {
-      const userExists = state.users.find(x => x.username.trim().toLowerCase() === cleanUser);
-      if (userExists) {
-        showMsg(loginAlert, `Incorrect password for user "${userExists.username}".`);
-      } else {
-        const registered = state.users.map(x => `"${x.username}" (${x.role})`).join(', ');
-        showMsg(loginAlert, `Account "${username}" not found. Active accounts: ${registered || 'admin (owner)'}`);
+    } finally {
+      if (btnLogin) {
+        btnLogin.disabled = false;
+        btnLogin.textContent = origBtnText;
       }
-      return;
     }
-
-    sessionStorage.setItem('tsidu_session_user', u.username);
-    currentUser = u;
-    currentStoreId = u.role === 'owner' ? (state.stores[0]?.id || null) : u.storeId;
-    showDashboard();
   });
 }
 
@@ -796,7 +779,7 @@ if (userForm) {
     if (!username || !password || !storeId) return;
     if (state.users.some(u => u.username === username)) { alert('Username exists'); return; }
     state.users.push({ username, password, role: 'storekeeper', storeId });
-    saveState();
+    saveState(true);
     userForm.reset();
     renderAdmin();
   });
@@ -805,7 +788,7 @@ if (userForm) {
 window.deleteUser = function(username) {
   if (confirm(`Remove storekeeper ${username}?`)) {
     state.users = state.users.filter(u => u.username !== username);
-    saveState();
+    saveState(true);
     renderAdmin();
   }
 };
@@ -1733,7 +1716,7 @@ if (changePassForm) {
     const user = state.users.find(u => u.username === currentUser.username);
     if (user) user.password = newP;
     currentUser.password = newP;
-    saveState();
+    saveState(true);
 
     showMsg(changePassAlert, 'Password updated successfully!', true);
     setTimeout(() => {
@@ -1802,7 +1785,7 @@ if (resetPassForm) {
     }
 
     u.password = newP;
-    saveState();
+    saveState(true);
 
     showMsg(resetPassAlert, `Password for "${username}" updated successfully!`, true);
     setTimeout(() => {
@@ -2213,112 +2196,138 @@ window.settleTripPayment = function(tripId) {
 };
 
 // ==================== CREDIT & RECEIVABLES LEDGER ====================
-if (btnSubtabTx && btnSubtabLedger) {
-  btnSubtabTx.addEventListener('click', () => {
-    btnSubtabTx.classList.add('active');
-    btnSubtabLedger.classList.remove('active');
-    subtabPaneTx.classList.remove('d-none');
-    subtabPaneLedger.classList.add('d-none');
-  });
+window.switchPaymentSubtab = function(tab) {
+  const btnTx = document.getElementById('btn-subtab-tx');
+  const btnLedger = document.getElementById('btn-subtab-ledger');
+  const paneTx = document.getElementById('subtab-pane-tx');
+  const paneLedger = document.getElementById('subtab-pane-ledger');
 
-  btnSubtabLedger.addEventListener('click', () => {
-    btnSubtabLedger.classList.add('active');
-    btnSubtabTx.classList.remove('active');
-    subtabPaneLedger.classList.remove('d-none');
-    subtabPaneTx.classList.add('d-none');
+  if (tab === 'ledger') {
+    if (btnLedger) btnLedger.classList.add('active');
+    if (btnTx) btnTx.classList.remove('active');
+    if (paneLedger) paneLedger.classList.remove('d-none');
+    if (paneTx) paneTx.classList.add('d-none');
     renderCreditLedger();
-  });
+  } else {
+    if (btnTx) btnTx.classList.add('active');
+    if (btnLedger) btnLedger.classList.remove('active');
+    if (paneTx) paneTx.classList.remove('d-none');
+    if (paneLedger) paneLedger.classList.add('d-none');
+    renderPayments();
+  }
+};
+
+if (btnSubtabTx) {
+  btnSubtabTx.addEventListener('click', () => window.switchPaymentSubtab('tx'));
+}
+if (btnSubtabLedger) {
+  btnSubtabLedger.addEventListener('click', () => window.switchPaymentSubtab('ledger'));
 }
 
 function renderCreditLedger() {
   const sd = getStoreData();
-  if (!sd || !ledgerTableBody) return;
+  const tbody = document.getElementById('ledger-table-body');
+  if (!sd || !tbody) return;
 
-  // Aggregate by party name
-  const ledgerMap = {};
+  try {
+    const ledgerMap = {};
 
-  // 1. Incurred from completed trips
-  sd.trips.forEach(t => {
-    if (t.status === 'completed') {
-      const party = t.driverName.trim();
-      if (!ledgerMap[party]) {
-        ledgerMap[party] = { party, role: 'Driver', incurred: 0, paid: 0, trips: 0 };
-      }
-      const tripRev = t.dispatchData.reduce((sum, d) => {
-        const r = t.returnData.find(x => x.productId === d.productId) || { sold: 0 };
-        return sum + (r.sold * d.price);
-      }, 0);
-      ledgerMap[party].incurred += tripRev;
-      ledgerMap[party].trips += 1;
-    }
-  });
-
-  // 2. Incurred from credit payments + Paid from cash/transfer
-  sd.payments.forEach(p => {
-    const party = p.party.trim();
-    if (!ledgerMap[party]) {
-      const isDriver = sd.drivers.some(d => d.name.toLowerCase() === party.toLowerCase());
-      ledgerMap[party] = { party, role: isDriver ? 'Driver' : 'Customer', incurred: 0, paid: 0, trips: 0 };
-    }
-    if (p.type === 'credit') {
-      ledgerMap[party].incurred += p.amount;
-    } else {
-      ledgerMap[party].paid += p.amount;
-    }
-  });
-
-  const parties = Object.values(ledgerMap);
-  const query = (ledgerSearchInput ? ledgerSearchInput.value : '').toLowerCase().trim();
-
-  let totalOutstanding = 0;
-  let openCreditCount = 0;
-  let totalCollected = 0;
-
-  ledgerTableBody.innerHTML = '';
-
-  parties.forEach(entry => {
-    const balance = Math.max(0, entry.incurred - entry.paid);
-    totalCollected += entry.paid;
-    if (balance > 0) {
-      totalOutstanding += balance;
-      openCreditCount += 1;
-    }
-
-    if (query && !entry.party.toLowerCase().includes(query) && !entry.role.toLowerCase().includes(query)) {
-      return;
-    }
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><strong>${entry.party}</strong></td>
-      <td><span class="badge ${entry.role === 'Driver' ? 'badge-info' : 'badge-secondary'}">${entry.role}</span></td>
-      <td class="text-right">ETB ${entry.incurred.toFixed(2)}</td>
-      <td class="text-right">ETB ${entry.paid.toFixed(2)}</td>
-      <td class="text-right" style="color:${balance > 0 ? 'var(--danger)' : 'var(--accent)'}; font-weight:700;">
-        ETB ${balance.toFixed(2)}
-      </td>
-      <td>
-        ${balance > 0 
-          ? `<span class="badge badge-danger">Due: ETB ${balance.toFixed(0)}</span>`
-          : `<span class="badge badge-success">Clear</span>`
+    // 1. Incurred from completed trips
+    (sd.trips || []).forEach(t => {
+      if (t && t.status === 'completed') {
+        const party = ((t.driverName || '') + '').trim() || 'Driver';
+        if (!ledgerMap[party]) {
+          ledgerMap[party] = { party, role: 'Driver', incurred: 0, paid: 0, trips: 0 };
         }
-      </td>
-      <td class="text-center keeper-only">
-        ${balance > 0 ? `
-          <button class="btn btn-primary btn-xs" onclick="collectPartyPayment('${entry.party.replace(/'/g, "\\'")}', ${balance})">Collect Payment</button>
-        ` : `<span class="text-secondary" style="font-size:0.8rem">All Clear</span>`}
-      </td>
-    `;
-    ledgerTableBody.appendChild(tr);
-  });
+        const tripRev = (t.dispatchData || []).reduce((sum, d) => {
+          if (!d) return sum;
+          const r = (t.returnData || []).find(x => x && x.productId === d.productId) || { sold: 0 };
+          return sum + ((Number(r.sold) || 0) * (Number(d.price) || 0));
+        }, 0);
+        ledgerMap[party].incurred += tripRev;
+        ledgerMap[party].trips += 1;
+      }
+    });
 
-  if (ledgerTotalOutstanding) ledgerTotalOutstanding.textContent = `ETB ${totalOutstanding.toFixed(2)}`;
-  if (ledgerPartiesCount) ledgerPartiesCount.textContent = openCreditCount;
-  if (ledgerTotalCollected) ledgerTotalCollected.textContent = `ETB ${totalCollected.toFixed(2)}`;
+    // 2. Incurred from credit payments + Paid from cash/transfer
+    (sd.payments || []).forEach(p => {
+      if (!p) return;
+      const party = ((p.party || '') + '').trim() || 'Customer';
+      if (!ledgerMap[party]) {
+        const isDriver = (sd.drivers || []).some(d => d && d.name && d.name.toLowerCase() === party.toLowerCase());
+        ledgerMap[party] = { party, role: isDriver ? 'Driver' : 'Customer', incurred: 0, paid: 0, trips: 0 };
+      }
+      const amt = Number(p.amount) || 0;
+      if (p.type === 'credit') {
+        ledgerMap[party].incurred += amt;
+      } else {
+        ledgerMap[party].paid += amt;
+      }
+    });
+
+    const parties = Object.values(ledgerMap);
+    const searchInput = document.getElementById('ledger-search');
+    const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+
+    let totalOutstanding = 0;
+    let openCreditCount = 0;
+    let totalCollected = 0;
+
+    tbody.innerHTML = '';
+
+    if (parties.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-secondary" style="padding:28px;">No credit accounts or completed driver trips recorded yet.</td></tr>`;
+    }
+
+    parties.forEach(entry => {
+      const balance = Math.max(0, entry.incurred - entry.paid);
+      totalCollected += entry.paid;
+      if (balance > 0) {
+        totalOutstanding += balance;
+        openCreditCount += 1;
+      }
+
+      if (query && !entry.party.toLowerCase().includes(query) && !entry.role.toLowerCase().includes(query)) {
+        return;
+      }
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${entry.party}</strong></td>
+        <td><span class="badge ${entry.role === 'Driver' ? 'badge-info' : 'badge-secondary'}">${entry.role}</span></td>
+        <td class="text-right">ETB ${entry.incurred.toFixed(2)}</td>
+        <td class="text-right">ETB ${entry.paid.toFixed(2)}</td>
+        <td class="text-right" style="color:${balance > 0 ? 'var(--danger)' : 'var(--accent)'}; font-weight:700;">
+          ETB ${balance.toFixed(2)}
+        </td>
+        <td>
+          ${balance > 0 
+            ? `<span class="badge badge-danger">Due: ETB ${balance.toFixed(0)}</span>`
+            : `<span class="badge badge-success">Clear</span>`
+          }
+        </td>
+        <td class="text-center keeper-only">
+          ${balance > 0 ? `
+            <button class="btn btn-primary btn-xs" onclick="collectPartyPayment('${entry.party.replace(/'/g, "\\'")}', ${balance})">Collect Payment</button>
+          ` : `<span class="text-secondary" style="font-size:0.8rem">All Clear</span>`}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const outEl = document.getElementById('ledger-total-outstanding');
+    const countEl = document.getElementById('ledger-parties-count');
+    const collEl = document.getElementById('ledger-total-collected');
+    if (outEl) outEl.textContent = `ETB ${totalOutstanding.toFixed(2)}`;
+    if (countEl) countEl.textContent = openCreditCount;
+    if (collEl) collEl.textContent = `ETB ${totalCollected.toFixed(2)}`;
+  } catch (err) {
+    console.error('Error rendering credit ledger:', err);
+  }
 }
 
 window.collectPartyPayment = function(party, balance) {
-  btnSubtabTx?.click();
+  window.switchPaymentSubtab('tx');
   if (payDateInput) payDateInput.value = new Date().toISOString().split('T')[0];
   if (payPartyInput) payPartyInput.value = party;
   if (payTypeSelect) payTypeSelect.value = 'cash';
@@ -2331,22 +2340,25 @@ window.exportLedgerCSV = function() {
   const sd = getStoreData();
   if (!sd) return;
   const ledgerMap = {};
-  sd.trips.forEach(t => {
-    if (t.status === 'completed') {
-      const party = t.driverName.trim();
+  (sd.trips || []).forEach(t => {
+    if (t && t.status === 'completed') {
+      const party = ((t.driverName || '') + '').trim() || 'Driver';
       if (!ledgerMap[party]) ledgerMap[party] = { party, role: 'Driver', incurred: 0, paid: 0 };
-      const rev = t.dispatchData.reduce((sum, d) => {
-        const r = t.returnData.find(x => x.productId === d.productId) || { sold: 0 };
-        return sum + (r.sold * d.price);
+      const rev = (t.dispatchData || []).reduce((sum, d) => {
+        if (!d) return sum;
+        const r = (t.returnData || []).find(x => x && x.productId === d.productId) || { sold: 0 };
+        return sum + ((Number(r.sold) || 0) * (Number(d.price) || 0));
       }, 0);
       ledgerMap[party].incurred += rev;
     }
   });
-  sd.payments.forEach(p => {
-    const party = p.party.trim();
+  (sd.payments || []).forEach(p => {
+    if (!p) return;
+    const party = ((p.party || '') + '').trim() || 'Customer';
     if (!ledgerMap[party]) ledgerMap[party] = { party, role: 'Customer', incurred: 0, paid: 0 };
-    if (p.type === 'credit') ledgerMap[party].incurred += p.amount;
-    else ledgerMap[party].paid += p.amount;
+    const amt = Number(p.amount) || 0;
+    if (p.type === 'credit') ledgerMap[party].incurred += amt;
+    else ledgerMap[party].paid += amt;
   });
 
   const header = ['Party', 'Role', 'Total Incurred (ETB)', 'Total Paid (ETB)', 'Balance Due (ETB)', 'Status'];
@@ -2386,17 +2398,6 @@ if (btnForgotOwner && forgotOwnerModal) {
       forgotOwnerUser.value = owner ? owner.username : 'admin';
     }
     setTimeout(() => forgotOwnerPass?.focus(), 50);
-  });
-}
-
-const btnAutofillAdmin = document.getElementById('btn-autofill-admin');
-if (btnAutofillAdmin) {
-  btnAutofillAdmin.addEventListener('click', () => {
-    const loginUser = document.getElementById('login-username');
-    const loginPass = document.getElementById('login-password');
-    if (loginUser) loginUser.value = 'admin';
-    if (loginPass) loginPass.value = 'admin';
-    document.getElementById('btn-login')?.click();
   });
 }
 
@@ -2445,7 +2446,7 @@ if (forgotOwnerForm) {
       state.users.unshift(owner);
     }
 
-    saveState();
+    saveState(true);
     closeForgotOwnerModal();
 
     sessionStorage.setItem('tsidu_session_user', owner.username);

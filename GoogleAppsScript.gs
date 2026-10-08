@@ -54,23 +54,28 @@ function doPost(e) {
 function readStateFromSheets(ss) {
   // Check if raw JSON state sheet exists
   var rawSheet = ss.getSheetByName('RAW_STATE');
+  var state = { users: [], stores: [], storeData: {} };
   if (rawSheet) {
     var lastRow = rawSheet.getLastRow();
     if (lastRow > 0) {
       var values = rawSheet.getRange(1, 1, lastRow, 1).getValues();
       var fullStr = values.map(function(r) { return r[0]; }).join('');
       if (fullStr && fullStr.trim().startsWith('{')) {
-        return JSON.parse(fullStr);
+        try {
+          state = JSON.parse(fullStr);
+        } catch (e) {}
       }
     }
   }
-  
-  // Fallback state
-  return {
-    users: [],
-    stores: [],
-    storeData: {}
-  };
+
+  // Multi-device guarantee: Ensure default owner admin exists in cloud state
+  if (!state.users || !Array.isArray(state.users) || state.users.length === 0) {
+    state.users = [{ username: 'admin', password: 'admin', role: 'owner', storeId: null }];
+  } else if (!state.users.some(function(u) { return u.role === 'owner'; })) {
+    state.users.unshift({ username: 'admin', password: 'admin', role: 'owner', storeId: null });
+  }
+
+  return state;
 }
 
 // ==================== SAVE TO SHEETS ====================
