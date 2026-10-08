@@ -74,9 +74,6 @@
         </div>
       </div>
       <button type="submit" id="btn-login" class="btn btn-primary btn-block">Sign In</button>
-      <div class="flex justify-end align-center" style="margin-top:14px; font-size:0.82rem;">
-        <button type="button" id="btn-forgot-owner" class="btn btn-glass btn-xs" style="color:var(--text-muted)">Reset Owner Pass</button>
-      </div>
     </form>
   </div>
 </div>
@@ -804,53 +801,6 @@
       <button type="button" class="btn btn-success btn-sm" id="btn-share-whatsapp">💬 Share via WhatsApp</button>
       <button type="button" class="btn btn-secondary btn-sm" id="btn-close-receipt-bottom">Close</button>
     </div>
-  </div>
-</div>
-
-<!-- FORGOT / RESET OWNER PASSWORD MODAL -->
-<div id="forgot-owner-modal" class="modal-overlay d-none">
-  <div class="modal-content" style="max-width:440px;">
-    <div class="modal-header">
-      <div class="modal-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        Reset Owner Account
-      </div>
-      <button type="button" class="btn-close" id="btn-close-forgot-owner" title="Close">&times;</button>
-    </div>
-    <p class="text-secondary" style="font-size:0.85rem;margin-bottom:14px;">
-      Set a new username and password for the primary Owner account. This will update local storage and synchronize with Google Sheets.
-    </p>
-    <div id="forgot-owner-alert" class="alert alert-danger d-none"></div>
-    <form id="forgot-owner-form" onsubmit="event.preventDefault()">
-      <div class="form-group">
-        <label for="forgot-owner-user">Owner Username</label>
-        <input type="text" id="forgot-owner-user" class="input-control" required value="admin" placeholder="e.g. admin">
-      </div>
-      <div class="form-group">
-        <label for="forgot-owner-pass">New Password</label>
-        <div class="password-wrapper">
-          <input type="password" id="forgot-owner-pass" class="input-control" required placeholder="Min 4 characters">
-          <button type="button" class="btn-toggle-password" title="Show/Hide Password" tabindex="-1">
-            <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="eye-closed d-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="forgot-owner-confirm">Confirm New Password</label>
-        <div class="password-wrapper">
-          <input type="password" id="forgot-owner-confirm" class="input-control" required placeholder="Re-type new password">
-          <button type="button" class="btn-toggle-password" title="Show/Hide Password" tabindex="-1">
-            <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="eye-closed d-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="flex gap-2">
-        <button type="submit" id="btn-save-forgot-owner" class="btn btn-primary" style="flex:1">Save & Log In</button>
-        <button type="button" id="btn-cancel-forgot-owner" class="btn btn-secondary">Cancel</button>
-      </div>
-    </form>
   </div>
 </div>
 

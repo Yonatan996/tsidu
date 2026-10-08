@@ -248,6 +248,16 @@ function saveState(pushImmediately = false) {
 }
 
 function getStoreData() {
+  if (!currentStoreId || !state.storeData[currentStoreId]) {
+    if (state.stores && state.stores.length > 0) {
+      currentStoreId = state.stores[0].id;
+    } else if (state.storeData && Object.keys(state.storeData).length > 0) {
+      currentStoreId = Object.keys(state.storeData)[0];
+    }
+  }
+  if (currentStoreId && !state.storeData[currentStoreId]) {
+    state.storeData[currentStoreId] = { products: [], drivers: [], trips: [], payments: [] };
+  }
   if (!currentStoreId || !state.storeData[currentStoreId]) return null;
   return state.storeData[currentStoreId];
 }
@@ -1684,9 +1694,6 @@ document.addEventListener('keydown', (e) => {
     if (receiptModal && !receiptModal.classList.contains('d-none')) {
       closeReceiptModal();
     }
-    if (forgotOwnerModal && !forgotOwnerModal.classList.contains('d-none')) {
-      closeForgotOwnerModal();
-    }
   }
 });
 
@@ -2105,13 +2112,6 @@ if (receiptModal) {
   });
 }
 
-// Print Receipt
-if (btnPrintReceipt) {
-  btnPrintReceipt.addEventListener('click', () => {
-    window.print();
-  });
-}
-
 // Text Manifest Generator for WhatsApp / Copy
 function generateReceiptTextManifest(trip, type = 'settlement') {
   const currentStore = state.stores.find(s => s.id === currentStoreId) || { name: 'Main Depot' };
@@ -2376,86 +2376,6 @@ window.exportLedgerCSV = function() {
   URL.revokeObjectURL(url);
 };
 
-
-// ==================== FORGOT / RESET OWNER ACCOUNT ====================
-const btnForgotOwner = document.getElementById('btn-forgot-owner');
-const forgotOwnerModal = document.getElementById('forgot-owner-modal');
-const btnCloseForgotOwner = document.getElementById('btn-close-forgot-owner');
-const btnCancelForgotOwner = document.getElementById('btn-cancel-forgot-owner');
-const forgotOwnerForm = document.getElementById('forgot-owner-form');
-const forgotOwnerUser = document.getElementById('forgot-owner-user');
-const forgotOwnerPass = document.getElementById('forgot-owner-pass');
-const forgotOwnerConfirm = document.getElementById('forgot-owner-confirm');
-const forgotOwnerAlert = document.getElementById('forgot-owner-alert');
-
-if (btnForgotOwner && forgotOwnerModal) {
-  btnForgotOwner.addEventListener('click', () => {
-    forgotOwnerModal.classList.remove('d-none');
-    if (forgotOwnerForm) forgotOwnerForm.reset();
-    if (forgotOwnerAlert) forgotOwnerAlert.classList.add('d-none');
-    const owner = state.users.find(u => u.role === 'owner');
-    if (forgotOwnerUser) {
-      forgotOwnerUser.value = owner ? owner.username : 'admin';
-    }
-    setTimeout(() => forgotOwnerPass?.focus(), 50);
-  });
-}
-
-function closeForgotOwnerModal() {
-  if (forgotOwnerModal) {
-    forgotOwnerModal.classList.add('d-none');
-    if (forgotOwnerForm) forgotOwnerForm.reset();
-  }
-}
-
-if (btnCloseForgotOwner) btnCloseForgotOwner.addEventListener('click', closeForgotOwnerModal);
-if (btnCancelForgotOwner) btnCancelForgotOwner.addEventListener('click', closeForgotOwnerModal);
-if (forgotOwnerModal) {
-  forgotOwnerModal.addEventListener('click', (e) => {
-    if (e.target === forgotOwnerModal) closeForgotOwnerModal();
-  });
-}
-
-if (forgotOwnerForm) {
-  forgotOwnerForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const newUsername = forgotOwnerUser.value.trim();
-    const newPass = forgotOwnerPass.value.trim();
-    const confirmPass = forgotOwnerConfirm.value.trim();
-
-    if (!newUsername) {
-      showMsg(forgotOwnerAlert, 'Username required.');
-      return;
-    }
-    if (newPass.length < 4) {
-      showMsg(forgotOwnerAlert, 'Password must be at least 4 characters.');
-      return;
-    }
-    if (newPass !== confirmPass) {
-      showMsg(forgotOwnerAlert, 'Passwords do not match.');
-      return;
-    }
-
-    let owner = state.users.find(u => u.role === 'owner' || u.username.toLowerCase() === 'admin');
-    if (owner) {
-      owner.username = newUsername;
-      owner.password = newPass;
-      owner.role = 'owner';
-    } else {
-      owner = { username: newUsername, password: newPass, role: 'owner', storeId: null };
-      state.users.unshift(owner);
-    }
-
-    saveState(true);
-    closeForgotOwnerModal();
-
-    sessionStorage.setItem('tsidu_session_user', owner.username);
-    currentUser = owner;
-    currentStoreId = state.stores[0]?.id || null;
-    showDashboard();
-    alert(`✓ Owner account updated! Logged in as ${owner.username}.`);
-  });
-}
-
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', initAuth);
+
