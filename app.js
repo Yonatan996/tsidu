@@ -399,7 +399,7 @@ function initAuth() {
   }
 
   if (sessionUser) {
-    const u = state.users.find(x => x.username === sessionUser);
+    const u = state.users.find(x => x.username.trim().toLowerCase() === sessionUser.trim().toLowerCase());
     if (u) {
       currentUser = u;
       showDashboard();
@@ -490,10 +490,27 @@ if (loginForm) {
     e.preventDefault();
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
+    const cleanUser = username.toLowerCase();
+    const cleanPass = password.trim();
     
-    const u = state.users.find(x => x.username === username && x.password === password);
-    if (!u) { showMsg(loginAlert, 'Invalid credentials.'); return; }
-    sessionStorage.setItem('tsidu_session_user', username);
+    // Case-insensitive username match with trimmed password fallback
+    const u = state.users.find(x => 
+      x.username.trim().toLowerCase() === cleanUser && 
+      (x.password === cleanPass || x.password === password)
+    );
+
+    if (!u) {
+      const userExists = state.users.find(x => x.username.trim().toLowerCase() === cleanUser);
+      if (userExists) {
+        showMsg(loginAlert, `Incorrect password for user "${userExists.username}".`);
+      } else {
+        const registered = state.users.map(x => `"${x.username}" (${x.role})`).join(', ');
+        showMsg(loginAlert, `Account "${username}" not found. Active accounts: ${registered || 'None'}`);
+      }
+      return;
+    }
+
+    sessionStorage.setItem('tsidu_session_user', u.username);
     currentUser = u;
     currentStoreId = u.role === 'owner' ? (state.stores[0]?.id || null) : u.storeId;
     showDashboard();
@@ -1607,6 +1624,9 @@ document.addEventListener('keydown', (e) => {
     if (receiptModal && !receiptModal.classList.contains('d-none')) {
       closeReceiptModal();
     }
+    if (forgotOwnerModal && !forgotOwnerModal.classList.contains('d-none')) {
+      closeForgotOwnerModal();
+    }
   }
 });
 
@@ -2266,6 +2286,84 @@ window.exportLedgerCSV = function() {
   a.click();
   URL.revokeObjectURL(url);
 };
+
+
+// ==================== FORGOT / RESET OWNER ACCOUNT ====================
+const btnForgotOwner = document.getElementById('btn-forgot-owner');
+const forgotOwnerModal = document.getElementById('forgot-owner-modal');
+const btnCloseForgotOwner = document.getElementById('btn-close-forgot-owner');
+const btnCancelForgotOwner = document.getElementById('btn-cancel-forgot-owner');
+const forgotOwnerForm = document.getElementById('forgot-owner-form');
+const forgotOwnerUser = document.getElementById('forgot-owner-user');
+const forgotOwnerPass = document.getElementById('forgot-owner-pass');
+const forgotOwnerConfirm = document.getElementById('forgot-owner-confirm');
+const forgotOwnerAlert = document.getElementById('forgot-owner-alert');
+
+if (btnForgotOwner && forgotOwnerModal) {
+  btnForgotOwner.addEventListener('click', () => {
+    forgotOwnerModal.classList.remove('d-none');
+    if (forgotOwnerForm) forgotOwnerForm.reset();
+    if (forgotOwnerAlert) forgotOwnerAlert.classList.add('d-none');
+    const owner = state.users.find(u => u.role === 'owner');
+    if (owner && forgotOwnerUser) forgotOwnerUser.value = owner.username;
+    setTimeout(() => forgotOwnerPass?.focus(), 50);
+  });
+}
+
+function closeForgotOwnerModal() {
+  if (forgotOwnerModal) {
+    forgotOwnerModal.classList.add('d-none');
+    if (forgotOwnerForm) forgotOwnerForm.reset();
+  }
+}
+
+if (btnCloseForgotOwner) btnCloseForgotOwner.addEventListener('click', closeForgotOwnerModal);
+if (btnCancelForgotOwner) btnCancelForgotOwner.addEventListener('click', closeForgotOwnerModal);
+if (forgotOwnerModal) {
+  forgotOwnerModal.addEventListener('click', (e) => {
+    if (e.target === forgotOwnerModal) closeForgotOwnerModal();
+  });
+}
+
+if (forgotOwnerForm) {
+  forgotOwnerForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const newUsername = forgotOwnerUser.value.trim();
+    const newPass = forgotOwnerPass.value.trim();
+    const confirmPass = forgotOwnerConfirm.value.trim();
+
+    if (!newUsername) {
+      showMsg(forgotOwnerAlert, 'Username required.');
+      return;
+    }
+    if (newPass.length < 4) {
+      showMsg(forgotOwnerAlert, 'Password must be at least 4 characters.');
+      return;
+    }
+    if (newPass !== confirmPass) {
+      showMsg(forgotOwnerAlert, 'Passwords do not match.');
+      return;
+    }
+
+    let owner = state.users.find(u => u.role === 'owner');
+    if (owner) {
+      owner.username = newUsername;
+      owner.password = newPass;
+    } else {
+      owner = { username: newUsername, password: newPass, role: 'owner', storeId: null };
+      state.users.push(owner);
+    }
+
+    saveState();
+    closeForgotOwnerModal();
+
+    sessionStorage.setItem('tsidu_session_user', owner.username);
+    currentUser = owner;
+    currentStoreId = state.stores[0]?.id || null;
+    showDashboard();
+    alert(`✓ Owner account updated! Logged in as ${owner.username}.`);
+  });
+}
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', initAuth);
