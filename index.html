@@ -5,51 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Tsidu Inventory – Cloud & Glass Management</title>
   <meta name="description" content="Tsidu Store Inventory: stock, dispatch, returns & payment tracking with Google Sheets storage.">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2.2">
 </head>
 <body>
 
 <!-- AUTH SECTION -->
 <div id="auth-section" class="auth-wrapper">
-  <div id="setup-card" class="auth-card d-none">
-    <div class="auth-logo">
-      <div class="logo-icon">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-      </div>
-      <h1>Tsidu Inventory</h1>
-      <p>Create your Owner account to get started</p>
-    </div>
-    <div id="setup-alert" class="alert alert-danger d-none"></div>
-    <form id="setup-form" onsubmit="event.preventDefault()">
-      <div class="form-group">
-        <label for="setup-username">Username</label>
-        <input type="text" id="setup-username" class="input-control" required placeholder="e.g. admin">
-      </div>
-      <div class="form-group">
-        <label for="setup-password">Password</label>
-        <div class="password-wrapper">
-          <input type="password" id="setup-password" class="input-control" required placeholder="Min 4 characters">
-          <button type="button" class="btn-toggle-password" title="Show/Hide Password" tabindex="-1">
-            <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="eye-closed d-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label for="setup-confirm-password">Confirm Password</label>
-        <div class="password-wrapper">
-          <input type="password" id="setup-confirm-password" class="input-control" required placeholder="Re-type password">
-          <button type="button" class="btn-toggle-password" title="Show/Hide Password" tabindex="-1">
-            <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="eye-closed d-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-          </button>
-        </div>
-      </div>
-      <button type="submit" id="btn-create-account" class="btn btn-primary btn-block">Create Account & Sign In</button>
-    </form>
-  </div>
-
-  <div id="login-card" class="auth-card">
+    <div id="login-card" class="auth-card">
     <div class="auth-logo">
       <div class="logo-icon">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
@@ -804,6 +766,6 @@
   </div>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js?v=2.2"></script>
 </body>
 </html>

@@ -273,13 +273,10 @@ function getStoreData() {
 
 // ==================== DOM SELECTORS ====================
 const authSection = document.getElementById('auth-section');
-const setupCard = document.getElementById('setup-card');
 const loginCard = document.getElementById('login-card');
 const dashboardSection = document.getElementById('dashboard-section');
 
-const setupForm = document.getElementById('setup-form');
 const loginForm = document.getElementById('login-form');
-const setupAlert = document.getElementById('setup-alert');
 const loginAlert = document.getElementById('login-alert');
 
 const displayUser = document.getElementById('display-user');
@@ -435,7 +432,6 @@ function initAuth() {
   loadState();
 
   // Multi-device guarantee: Always display the login card
-  if (setupCard) setupCard.classList.add('d-none');
   if (loginCard) loginCard.classList.remove('d-none');
 
   const sessionUser = sessionStorage.getItem('tsidu_session_user');
@@ -497,33 +493,7 @@ function showMsg(el, msg, success = false) {
   setTimeout(() => el.classList.add('d-none'), 5000);
 }
 
-if (setupForm) {
-  setupForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const username = document.getElementById('setup-username').value.trim();
-    const password = document.getElementById('setup-password').value;
-    const confirm  = document.getElementById('setup-confirm-password').value;
-    if (!username) { showMsg(setupAlert, 'Username required.'); return; }
-    if (password.length < 4) { showMsg(setupAlert, 'Password must be >= 4 chars.'); return; }
-    if (password !== confirm) { showMsg(setupAlert, 'Passwords mismatch.'); return; }
-    
-    const burrayuId = 'store_b_' + Date.now();
-    const jimmaId = 'store_j_' + Date.now();
-    state.stores.push({ id: burrayuId, name: 'Burrayu' });
-    state.stores.push({ id: jimmaId, name: 'Jimma' });
-    state.storeData[burrayuId] = { products: [], drivers: [], trips: [], payments: [] };
-    state.storeData[jimmaId] = { products: [], drivers: [], trips: [], payments: [] };
-    
-    const owner = { username, password, role: 'owner', storeId: null };
-    state.users.push(owner);
-    saveState(true);
-    
-    sessionStorage.setItem('tsidu_session_user', username);
-    currentUser = owner;
-    currentStoreId = burrayuId;
-    showDashboard();
-  });
-}
+
 
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
