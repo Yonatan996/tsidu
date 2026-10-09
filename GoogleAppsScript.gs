@@ -327,7 +327,6 @@ function saveStateToSheets(ss, state) {
 
   // 3. Human-friendly Tables: Products (includes Min Stock Alert Level)
   var prodSheet = getOrCreateSheet(ss, 'Products');
-  prodSheet.clear();
   var prodRows = [['Store Name', 'Product ID', 'SKU', 'Product Name', 'Stock Qty', 'Min Alert Qty', 'Unit Price (ETB)']];
   
   // 4. Human-friendly Tables: Drivers
@@ -426,7 +425,11 @@ function saveStateToSheets(ss, state) {
     });
   });
 
-  writeSheetData(prodSheet, prodRows);
+  // Safety: Only overwrite Products tab if valid product rows exist! Never clear into empty sheet
+  if (prodRows.length > 1) {
+    prodSheet.clear();
+    writeSheetData(prodSheet, prodRows);
+  }
   writeSheetData(driverSheet, driverRows);
   writeSheetData(tripSheet, tripRows);
   writeSheetData(paySheet, payRows);

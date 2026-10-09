@@ -93,6 +93,9 @@ function getCatalogForStore(storeName) {
 // ==================== GOOGLE SHEETS STORAGE CONFIG ====================
 // Integrated directly in code: Paste your Google Apps Script Web App URL below.
 // The app will automatically and silently synchronize all products, drivers, trips, and payments.
+const BURRAYU_STORE_ID = 'store_b_1791463064951';
+const JIMMA_STORE_ID = 'store_j_1791463064951';
+
 const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbz6NLepRvjuFGyQbhsSuDqgJurXUpZR7iCNmAH7-ZR_K5Ec-S9iNm_LL9B1wNuTQSOHzQ/exec'; // e.g. 'https://script.google.com/macros/s/AKfycb.../exec'
 
 const SheetsStorage = {
@@ -290,22 +293,37 @@ function loadState() {
     }
   }
 
-  // Ensure default stores exist
-  let changed = false;
+  // Ensure default stores exist with FIXED persistent IDs
   const mainStore = state.stores.find(s => s.name === 'Main Store');
-  if (mainStore) { mainStore.name = 'Burrayu'; changed = true; }
-  if (!state.stores.some(s => s.name === 'Burrayu')) {
-    const bId = 'store_b_' + Date.now();
-    state.stores.push({ id: bId, name: 'Burrayu' });
-    if (!state.storeData[bId]) state.storeData[bId] = { products: [], drivers: [], trips: [], payments: [] };
-    changed = true;
+  if (mainStore) { mainStore.name = 'Burrayu'; }
+
+  let burStore = state.stores.find(s => s.name.toLowerCase().includes('burrayu') || s.name.toLowerCase().includes('burayu'));
+  if (!burStore) {
+    burStore = { id: BURRAYU_STORE_ID, name: 'Burrayu' };
+    state.stores.push(burStore);
+  } else {
+    // Keep ID stable and consistent with storekeeper assignments
+    burStore.id = BURRAYU_STORE_ID;
   }
-  if (!state.stores.some(s => s.name === 'Jimma')) {
-    const jId = 'store_j_' + Date.now();
-    state.stores.push({ id: jId, name: 'Jimma' });
-    if (!state.storeData[jId]) state.storeData[jId] = { products: [], drivers: [], trips: [], payments: [] };
-    changed = true;
+
+  let jimStore = state.stores.find(s => s.name.toLowerCase().includes('jimma'));
+  if (!jimStore) {
+    jimStore = { id: JIMMA_STORE_ID, name: 'Jimma' };
+    state.stores.push(jimStore);
+  } else {
+    // Keep ID stable and consistent with storekeeper assignments
+    jimStore.id = JIMMA_STORE_ID;
   }
+
+  // Guarantee products exist for both stores
+  state.stores.forEach(s => {
+    if (!state.storeData[s.id]) {
+      state.storeData[s.id] = { products: [], drivers: [], trips: [], payments: [] };
+    }
+    if (!state.storeData[s.id].products || state.storeData[s.id].products.length === 0) {
+      state.storeData[s.id].products = getCatalogForStore(s.name);
+    }
+  });
 
   // Default owner in memory pending cloud pull
   if (!state.users || !Array.isArray(state.users)) {
@@ -332,8 +350,6 @@ function loadState() {
       storeId: null
     });
   }
-
-  if (changed) saveState();
 
   // Multi-device cloud sync: authoritatively pull live users & inventory from Google Sheets
   if (SheetsStorage.getUrl()) {
