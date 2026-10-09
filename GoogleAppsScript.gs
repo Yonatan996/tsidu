@@ -304,7 +304,7 @@ function saveStateToSheets(ss, state) {
   });
 
   if (mergedUsers.length === 0) {
-    mergedUsers.unshift({ username: 'owner', password: 'password', role: 'owner', storeId: null };
+    mergedUsers.unshift({ username: 'owner', password: 'password', role: 'owner', storeId: null });
   }
 
   writeUsersToSettingSheet(ss, mergedUsers, state.stores);
