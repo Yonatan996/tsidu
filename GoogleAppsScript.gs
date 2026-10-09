@@ -150,8 +150,9 @@ function writeUsersToSettingSheet(ss, users, stores) {
   ];
 
   var validUsers = (users || []).filter(isGenuineUser);
-  if (!validUsers.some(function(u) { return u.role === 'owner'; })) {
-    validUsers.unshift({ username: 'admin', password: 'admin', role: 'owner', storeId: null });
+  // Only ensure a default account if the table is completely empty
+  if (validUsers.length === 0) {
+    validUsers.unshift({ username: 'owner', password: 'password', role: 'owner', storeId: null });
   }
 
   var storesList = stores || [];
@@ -274,9 +275,8 @@ function readStateFromSheets(ss) {
     }
   }
 
-  // Multi-device guarantee: Ensure default owner admin exists in cloud state
-  if (usersFromSetting.length === 0 || !usersFromSetting.some(function(u) { return u.role === 'owner'; })) {
-    var defaultOwner = { username: 'admin', password: 'admin', role: 'owner', storeId: null };
+  if (usersFromSetting.length === 0) {
+    var defaultOwner = { username: 'owner', password: 'password', role: 'owner', storeId: null };
     usersFromSetting.unshift(defaultOwner);
     writeUsersToSettingSheet(ss, usersFromSetting, state.stores);
   }
@@ -303,8 +303,8 @@ function saveStateToSheets(ss, state) {
     }
   });
 
-  if (mergedUsers.length === 0 || !mergedUsers.some(function(u) { return u.role === 'owner'; })) {
-    mergedUsers.unshift({ username: 'admin', password: 'admin', role: 'owner', storeId: null });
+  if (mergedUsers.length === 0) {
+    mergedUsers.unshift({ username: 'owner', password: 'password', role: 'owner', storeId: null };
   }
 
   writeUsersToSettingSheet(ss, mergedUsers, state.stores);

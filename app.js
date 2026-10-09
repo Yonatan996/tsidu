@@ -342,14 +342,7 @@ function loadState() {
              un !== 'value' && un !== 'tsidu inventory' && un !== 'etb';
     });
   }
-  if (!state.users.some(u => u.username && u.username.toLowerCase() === 'admin')) {
-    state.users.unshift({
-      username: 'admin',
-      password: 'admin',
-      role: 'owner',
-      storeId: null
-    });
-  }
+
 
   // Multi-device cloud sync: authoritatively pull live users & inventory from Google Sheets
   if (SheetsStorage.getUrl()) {
