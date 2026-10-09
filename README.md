@@ -26,8 +26,9 @@ A multi-store inventory, dispatch, return, and sales tracking application with a
 
 ### 📊 Google Sheets Cloud Storage
 - **Direct Code Integration**: Point `GOOGLE_SHEETS_WEBAPP_URL` in `app.js` to your Google Apps Script Web App URL.
-- **Automated Tab Generation**: Synchronizes data across structured human-readable Google Sheets tabs (`Products`, `Drivers`, `Trips`, `Payments`, `RAW_STATE`).
-- **Offline-Resilient**: Saves immediately to `localStorage` and synchronizes debounced updates to Google Sheets in the background.
+- **Automated Tab Generation**: Synchronizes data across structured human-readable Google Sheets tabs (`setting`, `Products`, `Drivers`, `Trips`, `Payments`, `Credit_Ledger`, `RAW_STATE`).
+- **Dedicated `setting` Tab**: Stores user roles, usernames, passwords, and system credentials securely in a dedicated `setting` sheet tab, completely isolated and sanitized away from `RAW_STATE`.
+- **Offline-Resilient**: Saves operational cache locally and synchronizes updates to Google Sheets in the background.
 
 ### 🏪 Multi-Store & Role-Based Access
 - **Multi-Store Management**: Supports multiple branches (e.g., *Burrayu*, *Jimma*).

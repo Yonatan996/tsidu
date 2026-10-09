@@ -108,9 +108,18 @@ const SheetsStorage = {
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const res = await response.json();
       if (res.status === 'success' && res.data) {
+        let hasData = false;
         if (res.data.stores && res.data.stores.length > 0) {
-          state = res.data;
+          state.stores = res.data.stores;
+          state.storeData = res.data.storeData || {};
+          hasData = true;
+        }
+        if (res.data.users && Array.isArray(res.data.users) && res.data.users.length > 0) {
+          state.users = res.data.users;
+          hasData = true;
+        }
 
+        if (hasData) {
           // Guarantee admin account is preserved in memory from cloud
           if (!state.users || !Array.isArray(state.users)) state.users = [];
           if (!state.users.some(u => u.username.toLowerCase() === 'admin')) {
@@ -139,7 +148,7 @@ const SheetsStorage = {
             initAuth();
           }
 
-          if (showToast) alert('Successfully pulled latest inventory from Google Sheets!');
+          if (showToast) alert('Successfully pulled latest data from Google Sheets!');
           return true;
         }
       }

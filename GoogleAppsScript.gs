@@ -32,7 +32,7 @@ function doPost(e) {
     var payload = JSON.parse(contents);
     var state = payload.state || payload; // Supports wrapped or direct state
     
-    // Save state into dedicated tabs and raw backup
+    // Save state into dedicated tabs, setting sheet, and sanitized backup
     saveStateToSheets(ss, state);
     
     return ContentService.createTextOutput(JSON.stringify({
@@ -50,9 +50,143 @@ function doPost(e) {
   }
 }
 
+// ==================== SETTING SHEET HELPERS ====================
+function getSettingSheet(ss) {
+  return ss.getSheetByName('setting') || ss.getSheetByName('Settings');
+}
+
+function readUsersFromSettingSheet(ss) {
+  var sheet = getSettingSheet(ss);
+  if (!sheet) return [];
+  
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 2 || lastCol < 2) return [];
+
+  var data = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  if (!data || data.length < 2) return [];
+
+  // Parse header row dynamically to find column indexes
+  var headers = data[0].map(function(h) { return String(h || '').trim().toLowerCase(); });
+  
+  var roleIdx = headers.indexOf('role');
+  var userIdx = headers.indexOf('username');
+  if (userIdx === -1) userIdx = headers.indexOf('user');
+  var passIdx = headers.indexOf('password');
+  if (passIdx === -1) passIdx = headers.indexOf('pass');
+  var storeNameIdx = headers.indexOf('assigned store');
+  if (storeNameIdx === -1) storeNameIdx = headers.indexOf('store name');
+  var storeIdIdx = headers.indexOf('store id');
+  if (storeIdIdx === -1) storeIdIdx = headers.indexOf('storeid');
+
+  // Standard positional fallbacks if custom headers aren't detected
+  if (roleIdx === -1) roleIdx = 0;
+  if (userIdx === -1) userIdx = 1;
+  if (passIdx === -1) passIdx = 2;
+  if (storeNameIdx === -1) storeNameIdx = 3;
+  if (storeIdIdx === -1) storeIdIdx = 4;
+
+  var users = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var username = String(row[userIdx] !== undefined ? row[userIdx] : '').trim();
+    if (!username) continue; // Skip empty row
+
+    // Stop if we hit a section divider or config table
+    if (username.indexOf('---') !== -1 || username.toLowerCase().indexOf('setting') !== -1 || username.toLowerCase().indexOf('credential') !== -1) {
+      break;
+    }
+
+    var role = String(row[roleIdx] !== undefined ? row[roleIdx] : '').trim().toLowerCase();
+    if (!role) role = 'storekeeper';
+    if (role === 'admin') role = 'owner';
+
+    var password = String(row[passIdx] !== undefined ? row[passIdx] : '').trim();
+    var rawStoreId = row[storeIdIdx] !== undefined ? String(row[storeIdIdx]).trim() : '';
+    var storeId = (rawStoreId && rawStoreId !== 'null' && rawStoreId !== 'undefined') ? rawStoreId : null;
+
+    users.push({
+      role: role,
+      username: username,
+      password: password,
+      storeId: storeId
+    });
+  }
+
+  return users;
+}
+
+function writeUsersToSettingSheet(ss, users, stores) {
+  var sheet = getOrCreateSheet(ss, 'setting');
+  sheet.clear();
+
+  // 1. User & Role Credentials Table
+  var rows = [
+    ['Role', 'Username', 'Password', 'Assigned Store', 'Store ID', 'Status', 'Updated At']
+  ];
+
+  var storesList = stores || [];
+  (users || []).forEach(function(u) {
+    var storeName = 'All Stores (Owner)';
+    if (u.role !== 'owner' && u.storeId) {
+      var foundStore = storesList.find(function(s) { return s.id === u.storeId; });
+      storeName = foundStore ? foundStore.name : (u.storeId || 'Unassigned');
+    }
+    rows.push([
+      u.role || 'storekeeper',
+      u.username,
+      u.password,
+      storeName,
+      u.storeId || 'null',
+      'Active',
+      new Date().toISOString()
+    ]);
+  });
+
+  // 2. Empty spacing row
+  rows.push(['', '', '', '', '', '', '']);
+
+  // 3. Other Credentials & System Configuration Table
+  rows.push(['--- SYSTEM CREDENTIALS & CONFIGURATION ---', '', '', '', '', '', '']);
+  rows.push(['Setting / Credential Key', 'Value', 'Description', '', '', '', '']);
+  rows.push(['DEFAULT_OWNER_ROLE', 'owner', 'Top-level administrative privileges across all stores', '', '', '', '']);
+  rows.push(['DEFAULT_ADMIN_USER', 'admin', 'Root owner account identifier', '', '', '', '']);
+  rows.push(['APP_NAME', 'Tsidu Inventory', 'Application identifier', '', '', '', '']);
+  rows.push(['DEFAULT_CURRENCY', 'ETB', 'Primary operating transactional currency', '', '', '', '']);
+  rows.push(['CREDENTIAL_STORAGE', 'setting', 'User roles, usernames, passwords stored in this sheet', '', '', '', '']);
+  rows.push(['RAW_STATE_SECURITY', 'Sanitized', 'User credentials excluded from RAW_STATE backup', '', '', '', '']);
+
+  // Write all rows
+  sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+
+  // Style Header Row
+  var header = sheet.getRange(1, 1, 1, rows[0].length);
+  header.setFontWeight('bold');
+  header.setBackground('#4338ca'); // Indigo
+  header.setFontColor('#ffffff');
+  sheet.setFrozenRows(1);
+
+  // Style Section Divider & Subheaders
+  var sectionRow = users.length + 3;
+  var sectionHeader = sheet.getRange(sectionRow, 1, 1, rows[0].length);
+  sectionHeader.setFontWeight('bold');
+  sectionHeader.setBackground('#1e1b4b'); // Dark indigo
+  sectionHeader.setFontColor('#a5b4fc');
+
+  var subHeader = sheet.getRange(sectionRow + 1, 1, 1, 3);
+  subHeader.setFontWeight('bold');
+  subHeader.setBackground('#312e81');
+  subHeader.setFontColor('#ffffff');
+
+  // Auto-resize columns for readability
+  for (var c = 1; c <= rows[0].length; c++) {
+    sheet.autoResizeColumn(c);
+  }
+}
+
 // ==================== READ FROM SHEETS ====================
 function readStateFromSheets(ss) {
-  // Check if raw JSON state sheet exists
+  // 1. Read operational inventory from RAW_STATE
   var rawSheet = ss.getSheetByName('RAW_STATE');
   var state = { users: [], stores: [], storeData: {} };
   if (rawSheet) {
@@ -68,22 +202,62 @@ function readStateFromSheets(ss) {
     }
   }
 
-  // Multi-device guarantee: Ensure default owner admin exists in cloud state
-  if (!state.users || !Array.isArray(state.users) || state.users.length === 0) {
-    state.users = [{ username: 'admin', password: 'admin', role: 'owner', storeId: null }];
-  } else if (!state.users.some(function(u) { return u.role === 'owner'; })) {
-    state.users.unshift({ username: 'admin', password: 'admin', role: 'owner', storeId: null });
+  // Ensure state structure
+  if (!state.stores) state.stores = [];
+  if (!state.storeData) state.storeData = {};
+
+  // 2. Read users & credentials from 'setting' sheet (NOT from RAW_STATE)
+  var usersFromSetting = readUsersFromSettingSheet(ss);
+
+  // Migration: If setting sheet had no users yet, check if legacy RAW_STATE had them
+  if (usersFromSetting.length === 0 && state.users && Array.isArray(state.users) && state.users.length > 0) {
+    writeUsersToSettingSheet(ss, state.users, state.stores);
+    usersFromSetting = state.users;
   }
+
+  // Multi-device guarantee: Ensure default owner admin exists in cloud state
+  if (usersFromSetting.length === 0 || !usersFromSetting.some(function(u) { return u.role === 'owner'; })) {
+    var defaultOwner = { username: 'admin', password: 'admin', role: 'owner', storeId: null };
+    usersFromSetting.unshift(defaultOwner);
+    writeUsersToSettingSheet(ss, usersFromSetting, state.stores);
+  }
+
+  // Set users in returned state
+  state.users = usersFromSetting;
 
   return state;
 }
 
 // ==================== SAVE TO SHEETS ====================
 function saveStateToSheets(ss, state) {
-  // 1. Save Raw JSON State with safe chunking (Google Sheets 50k char cell limit protection)
+  // 1. Store User Roles, Usernames, Passwords and Credentials in the 'setting' sheet
+  var currentSheetUsers = readUsersFromSettingSheet(ss);
+  var mergedUsers = (state.users || []).slice();
+
+  // If setting sheet has users created/edited directly in Google Sheets, preserve them
+  currentSheetUsers.forEach(function(su) {
+    var exists = mergedUsers.some(function(u) {
+      return u.username.toLowerCase() === su.username.toLowerCase();
+    });
+    if (!exists) {
+      mergedUsers.push(su);
+    }
+  });
+
+  if (mergedUsers.length === 0) {
+    mergedUsers.push({ username: 'admin', password: 'admin', role: 'owner', storeId: null });
+  }
+
+  writeUsersToSettingSheet(ss, mergedUsers, state.stores);
+
+  // 2. Save Raw JSON State WITHOUT users/passwords/credentials (Sanitized state)
+  var rawState = JSON.parse(JSON.stringify(state));
+  rawState.users = []; // Exclude users and credentials from RAW_STATE backup
+  delete rawState.credentials;
+
   var rawSheet = getOrCreateSheet(ss, 'RAW_STATE');
   rawSheet.clear();
-  var jsonStr = JSON.stringify(state);
+  var jsonStr = JSON.stringify(rawState);
   var chunkSize = 45000;
   var chunks = [];
   for (var i = 0; i < jsonStr.length; i += chunkSize) {
@@ -92,27 +266,27 @@ function saveStateToSheets(ss, state) {
   rawSheet.getRange(1, 1, chunks.length, 1).setValues(chunks);
   rawSheet.hideSheet();
 
-  // 2. Human-friendly Tables: Products (includes Min Stock Alert Level)
+  // 3. Human-friendly Tables: Products (includes Min Stock Alert Level)
   var prodSheet = getOrCreateSheet(ss, 'Products');
   prodSheet.clear();
   var prodRows = [['Store Name', 'Product ID', 'SKU', 'Product Name', 'Stock Qty', 'Min Alert Qty', 'Unit Price (ETB)']];
   
-  // 3. Human-friendly Tables: Drivers
+  // 4. Human-friendly Tables: Drivers
   var driverSheet = getOrCreateSheet(ss, 'Drivers');
   driverSheet.clear();
   var driverRows = [['Store Name', 'Driver ID', 'Driver Name', 'Phone']];
 
-  // 4. Human-friendly Tables: Trips (includes Damaged Goods & Settlement Tracking)
+  // 5. Human-friendly Tables: Trips (includes Damaged Goods & Settlement Tracking)
   var tripSheet = getOrCreateSheet(ss, 'Trips');
   tripSheet.clear();
   var tripRows = [['Store Name', 'Trip ID', 'Date', 'Driver Name', 'Status', 'Dispatched Summary', 'Sold Summary', 'Returned Summary', 'Damaged Summary', 'Gross Revenue (ETB)', 'Amount Paid (ETB)', 'Balance Due (ETB)', 'Settlement Status']];
 
-  // 5. Human-friendly Tables: Payments (includes Linked Trip ID)
+  // 6. Human-friendly Tables: Payments (includes Linked Trip ID)
   var paySheet = getOrCreateSheet(ss, 'Payments');
   paySheet.clear();
   var payRows = [['Store Name', 'Payment ID', 'Date', 'Party', 'Type', 'Amount (ETB)', 'Linked Trip ID', 'Note']];
 
-  // 6. Human-friendly Tables: Credit & Receivables Ledger
+  // 7. Human-friendly Tables: Credit & Receivables Ledger
   var ledgerSheet = getOrCreateSheet(ss, 'Credit_Ledger');
   ledgerSheet.clear();
   var ledgerRows = [['Store Name', 'Party / Driver', 'Role', 'Total Incurred (ETB)', 'Total Paid (ETB)', 'Balance Due (ETB)', 'Status']];
@@ -201,7 +375,7 @@ function saveStateToSheets(ss, state) {
 
   // Sync Log sheet
   var logSheet = getOrCreateSheet(ss, 'Sync_Log');
-  logSheet.appendRow([new Date(), 'Synced from Tsidu Web App', Object.keys(state.storeData || {}).length + ' stores synced']);
+  logSheet.appendRow([new Date(), 'Synced from Tsidu Web App', Object.keys(state.storeData || {}).length + ' stores synced, ' + mergedUsers.length + ' users in setting sheet']);
 }
 
 function getProdName(products, id) {
