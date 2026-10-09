@@ -50,6 +50,31 @@ function doPost(e) {
   }
 }
 
+// ==================== USER VALIDATION & FILTERING ====================
+function isGenuineUser(u) {
+  if (!u || !u.username) return false;
+  var un = String(u.username).trim().toLowerCase();
+  var role = String(u.role || '').trim().toLowerCase();
+  
+  // Reject any bogus config rows or header echoes
+  if (role.indexOf('default_admin') !== -1 ||
+      role.indexOf('app_name') !== -1 ||
+      role.indexOf('default_currency') !== -1 ||
+      role.indexOf('credential') !== -1 ||
+      role.indexOf('setting') !== -1 ||
+      role.indexOf('raw_state') !== -1 ||
+      role.indexOf('---') !== -1 ||
+      un.indexOf('---') !== -1 ||
+      un === 'value' ||
+      un === 'description' ||
+      un === 'tsidu inventory' ||
+      un === 'etb' ||
+      un === 'username') {
+    return false;
+  }
+  return true;
+}
+
 // ==================== SETTING SHEET HELPERS ====================
 function getSettingSheet(ss) {
   return ss.getSheetByName('setting') || ss.getSheetByName('Settings');
@@ -92,11 +117,6 @@ function readUsersFromSettingSheet(ss) {
     var username = String(row[userIdx] !== undefined ? row[userIdx] : '').trim();
     if (!username) continue; // Skip empty row
 
-    // Stop if we hit a section divider or config table
-    if (username.indexOf('---') !== -1 || username.toLowerCase().indexOf('setting') !== -1 || username.toLowerCase().indexOf('credential') !== -1) {
-      break;
-    }
-
     var role = String(row[roleIdx] !== undefined ? row[roleIdx] : '').trim().toLowerCase();
     if (!role) role = 'storekeeper';
     if (role === 'admin') role = 'owner';
@@ -105,12 +125,16 @@ function readUsersFromSettingSheet(ss) {
     var rawStoreId = row[storeIdIdx] !== undefined ? String(row[storeIdIdx]).trim() : '';
     var storeId = (rawStoreId && rawStoreId !== 'null' && rawStoreId !== 'undefined') ? rawStoreId : null;
 
-    users.push({
+    var candidate = {
       role: role,
       username: username,
       password: password,
       storeId: storeId
-    });
+    };
+
+    if (isGenuineUser(candidate)) {
+      users.push(candidate);
+    }
   }
 
   return users;
@@ -120,13 +144,18 @@ function writeUsersToSettingSheet(ss, users, stores) {
   var sheet = getOrCreateSheet(ss, 'setting');
   sheet.clear();
 
-  // 1. User & Role Credentials Table
+  // Pure, clean User & Role Credentials Table ONLY
   var rows = [
     ['Role', 'Username', 'Password', 'Assigned Store', 'Store ID', 'Status', 'Updated At']
   ];
 
+  var validUsers = (users || []).filter(isGenuineUser);
+  if (!validUsers.some(function(u) { return u.role === 'owner'; })) {
+    validUsers.unshift({ username: 'admin', password: 'admin', role: 'owner', storeId: null });
+  }
+
   var storesList = stores || [];
-  (users || []).forEach(function(u) {
+  validUsers.forEach(function(u) {
     var storeName = 'All Stores (Owner)';
     if (u.role !== 'owner' && u.storeId) {
       var foundStore = storesList.find(function(s) { return s.id === u.storeId; });
@@ -143,20 +172,7 @@ function writeUsersToSettingSheet(ss, users, stores) {
     ]);
   });
 
-  // 2. Empty spacing row
-  rows.push(['', '', '', '', '', '', '']);
-
-  // 3. Other Credentials & System Configuration Table
-  rows.push(['--- SYSTEM CREDENTIALS & CONFIGURATION ---', '', '', '', '', '', '']);
-  rows.push(['Setting / Credential Key', 'Value', 'Description', '', '', '', '']);
-  rows.push(['DEFAULT_OWNER_ROLE', 'owner', 'Top-level administrative privileges across all stores', '', '', '', '']);
-  rows.push(['DEFAULT_ADMIN_USER', 'admin', 'Root owner account identifier', '', '', '', '']);
-  rows.push(['APP_NAME', 'Tsidu Inventory', 'Application identifier', '', '', '', '']);
-  rows.push(['DEFAULT_CURRENCY', 'ETB', 'Primary operating transactional currency', '', '', '', '']);
-  rows.push(['CREDENTIAL_STORAGE', 'setting', 'User roles, usernames, passwords stored in this sheet', '', '', '', '']);
-  rows.push(['RAW_STATE_SECURITY', 'Sanitized', 'User credentials excluded from RAW_STATE backup', '', '', '', '']);
-
-  // Write all rows
+  // Write all rows (ONLY the clean user accounts table)
   sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
 
   // Style Header Row
@@ -165,18 +181,6 @@ function writeUsersToSettingSheet(ss, users, stores) {
   header.setBackground('#4338ca'); // Indigo
   header.setFontColor('#ffffff');
   sheet.setFrozenRows(1);
-
-  // Style Section Divider & Subheaders
-  var sectionRow = users.length + 3;
-  var sectionHeader = sheet.getRange(sectionRow, 1, 1, rows[0].length);
-  sectionHeader.setFontWeight('bold');
-  sectionHeader.setBackground('#1e1b4b'); // Dark indigo
-  sectionHeader.setFontColor('#a5b4fc');
-
-  var subHeader = sheet.getRange(sectionRow + 1, 1, 1, 3);
-  subHeader.setFontWeight('bold');
-  subHeader.setBackground('#312e81');
-  subHeader.setFontColor('#ffffff');
 
   // Auto-resize columns for readability
   for (var c = 1; c <= rows[0].length; c++) {
@@ -207,12 +211,15 @@ function readStateFromSheets(ss) {
   if (!state.storeData) state.storeData = {};
 
   // 2. Read users & credentials from 'setting' sheet (NOT from RAW_STATE)
-  var usersFromSetting = readUsersFromSettingSheet(ss);
+  var usersFromSetting = readUsersFromSettingSheet(ss).filter(isGenuineUser);
 
   // Migration: If setting sheet had no users yet, check if legacy RAW_STATE had them
-  if (usersFromSetting.length === 0 && state.users && Array.isArray(state.users) && state.users.length > 0) {
-    writeUsersToSettingSheet(ss, state.users, state.stores);
-    usersFromSetting = state.users;
+  if (usersFromSetting.length === 0 && state.users && Array.isArray(state.users)) {
+    var legacyUsers = state.users.filter(isGenuineUser);
+    if (legacyUsers.length > 0) {
+      writeUsersToSettingSheet(ss, legacyUsers, state.stores);
+      usersFromSetting = legacyUsers;
+    }
   }
 
   // Multi-device guarantee: Ensure default owner admin exists in cloud state
@@ -231,8 +238,8 @@ function readStateFromSheets(ss) {
 // ==================== SAVE TO SHEETS ====================
 function saveStateToSheets(ss, state) {
   // 1. Store User Roles, Usernames, Passwords and Credentials in the 'setting' sheet
-  var currentSheetUsers = readUsersFromSettingSheet(ss);
-  var mergedUsers = (state.users || []).slice();
+  var currentSheetUsers = readUsersFromSettingSheet(ss).filter(isGenuineUser);
+  var mergedUsers = (state.users || []).filter(isGenuineUser);
 
   // If setting sheet has users created/edited directly in Google Sheets, preserve them
   currentSheetUsers.forEach(function(su) {
@@ -244,8 +251,8 @@ function saveStateToSheets(ss, state) {
     }
   });
 
-  if (mergedUsers.length === 0) {
-    mergedUsers.push({ username: 'admin', password: 'admin', role: 'owner', storeId: null });
+  if (mergedUsers.length === 0 || !mergedUsers.some(function(u) { return u.role === 'owner'; })) {
+    mergedUsers.unshift({ username: 'admin', password: 'admin', role: 'owner', storeId: null });
   }
 
   writeUsersToSettingSheet(ss, mergedUsers, state.stores);

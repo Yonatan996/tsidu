@@ -115,7 +115,18 @@ const SheetsStorage = {
           hasData = true;
         }
         if (res.data.users && Array.isArray(res.data.users) && res.data.users.length > 0) {
-          state.users = res.data.users;
+          state.users = res.data.users.filter(u => {
+            if (!u || !u.username) return false;
+            const role = (u.role || '').toLowerCase();
+            const un = u.username.toLowerCase();
+            return (role === 'owner' || role === 'storekeeper') &&
+                   role.indexOf('default_admin') === -1 &&
+                   role.indexOf('app_name') === -1 &&
+                   role.indexOf('default_currency') === -1 &&
+                   role.indexOf('credential') === -1 &&
+                   role.indexOf('setting') === -1 &&
+                   un !== 'value' && un !== 'tsidu inventory' && un !== 'etb';
+          });
           hasData = true;
         }
 
@@ -217,7 +228,22 @@ function loadState() {
   }
 
   // Default owner in memory pending cloud pull
-  if (!state.users || !Array.isArray(state.users)) state.users = [];
+  if (!state.users || !Array.isArray(state.users)) {
+    state.users = [];
+  } else {
+    state.users = state.users.filter(u => {
+      if (!u || !u.username) return false;
+      const role = (u.role || '').toLowerCase();
+      const un = u.username.toLowerCase();
+      return (role === 'owner' || role === 'storekeeper') &&
+             role.indexOf('default_admin') === -1 &&
+             role.indexOf('app_name') === -1 &&
+             role.indexOf('default_currency') === -1 &&
+             role.indexOf('credential') === -1 &&
+             role.indexOf('setting') === -1 &&
+             un !== 'value' && un !== 'tsidu inventory' && un !== 'etb';
+    });
+  }
   if (!state.users.some(u => u.username && u.username.toLowerCase() === 'admin')) {
     state.users.unshift({
       username: 'admin',
