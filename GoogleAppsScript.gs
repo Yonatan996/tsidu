@@ -210,6 +210,58 @@ function readStateFromSheets(ss) {
   if (!state.stores) state.stores = [];
   if (!state.storeData) state.storeData = {};
 
+  // Products Tab Fallback: Restore products from the human-editable 'Products' tab if RAW_STATE has empty products
+  var prodSheet = ss.getSheetByName('Products');
+  if (prodSheet && prodSheet.getLastRow() > 1) {
+    try {
+      var prodData = prodSheet.getRange(1, 1, prodSheet.getLastRow(), prodSheet.getLastColumn()).getValues();
+      var pHeaders = prodData[0].map(function(h) { return String(h || '').trim().toLowerCase(); });
+      var sNameIdx = pHeaders.indexOf('store name');
+      var pIdIdx = pHeaders.indexOf('product id');
+      var skuIdx = pHeaders.indexOf('sku');
+      var nameIdx = pHeaders.indexOf('product name');
+      var stockIdx = pHeaders.indexOf('stock qty');
+      var minIdx = pHeaders.indexOf('min alert qty');
+      var priceIdx = pHeaders.indexOf('unit price (etb)');
+
+      if (sNameIdx === -1) sNameIdx = 0;
+      if (pIdIdx === -1) pIdIdx = 1;
+      if (skuIdx === -1) skuIdx = 2;
+      if (nameIdx === -1) nameIdx = 3;
+      if (stockIdx === -1) stockIdx = 4;
+      if (minIdx === -1) minIdx = 5;
+      if (priceIdx === -1) priceIdx = 6;
+
+      var storeProductsMap = {};
+      for (var pi = 1; pi < prodData.length; pi++) {
+        var pRow = prodData[pi];
+        var sName = String(pRow[sNameIdx] || '').trim().toLowerCase();
+        var pName = String(pRow[nameIdx] || '').trim();
+        if (!sName || !pName) continue;
+        if (!storeProductsMap[sName]) storeProductsMap[sName] = [];
+        storeProductsMap[sName].push({
+          id: String(pRow[pIdIdx] || ('p_' + pi)).trim(),
+          sku: String(pRow[skuIdx] || '').trim(),
+          name: pName,
+          stock: Number(pRow[stockIdx]) || 0,
+          minStock: Number(pRow[minIdx]) || 10,
+          price: Number(pRow[priceIdx]) || 0
+        });
+      }
+
+      state.stores.forEach(function(s) {
+        if (!state.storeData[s.id]) {
+          state.storeData[s.id] = { products: [], drivers: [], trips: [], payments: [] };
+        }
+        var curProds = state.storeData[s.id].products || [];
+        var foundProds = storeProductsMap[s.name.toLowerCase()];
+        if (curProds.length === 0 && foundProds && foundProds.length > 0) {
+          state.storeData[s.id].products = foundProds;
+        }
+      });
+    } catch (pe) {}
+  }
+
   // 2. Read users & credentials from 'setting' sheet (NOT from RAW_STATE)
   var usersFromSetting = readUsersFromSettingSheet(ss).filter(isGenuineUser);
 
