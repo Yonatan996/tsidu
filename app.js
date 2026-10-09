@@ -214,16 +214,7 @@ const SheetsStorage = {
         }
 
         if (hasData) {
-          // Guarantee admin account is preserved in memory from cloud
           if (!state.users || !Array.isArray(state.users)) state.users = [];
-          if (!state.users.some(u => u.username.toLowerCase() === 'admin')) {
-            state.users.unshift({
-              username: 'admin',
-              password: 'admin',
-              role: 'owner',
-              storeId: null
-            });
-          }
 
           // Cache stores and products locally (never credentials for multi-device security)
           try {
@@ -646,20 +637,6 @@ if (loginForm) {
           x.username.trim().toLowerCase() === cleanUser && 
           (x.password === cleanPass || x.password === password)
         );
-      }
-
-      // 3. Fallback check for default admin
-      if (!u && cleanUser === 'admin' && cleanPass === 'admin') {
-        let adminAccount = state.users.find(x => x.username.trim().toLowerCase() === 'admin');
-        if (!adminAccount) {
-          adminAccount = { username: 'admin', password: 'admin', role: 'owner', storeId: null };
-          state.users.unshift(adminAccount);
-        } else {
-          adminAccount.password = 'admin';
-          adminAccount.role = 'owner';
-        }
-        saveState(true);
-        u = adminAccount;
       }
 
       if (!u) {
