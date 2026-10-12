@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Tsidu Inventory – Stock Management</title>
   <meta name="description" content="Tsidu Store Inventory: stock, dispatch, returns & payment tracking with Google Sheets storage.">
-  <link rel="stylesheet" href="style.css?v=2.2">
+  <link rel="stylesheet" href="style.css?v=2.3">
 </head>
 <body>
 
@@ -204,58 +204,23 @@
 
       <!-- TAB: STOCK -->
       <div id="tab-inventory" class="tab-pane fade-in d-none">
-        <div class="dashboard-grid two-col">
-          <div class="keeper-only">
-            <div class="card">
-              <h2 class="card-title" id="product-form-title">Add New Product</h2>
-              <form id="product-form" onsubmit="event.preventDefault()">
-                <input type="hidden" id="product-id">
-                <div class="form-group">
-                  <label for="product-name">Product Name</label>
-                  <input type="text" id="product-name" class="input-control" required placeholder="e.g. Special White Bread">
-                </div>
-                <div class="form-group">
-                  <label for="product-sku">
-                    SKU / Code
-                    <button type="button" id="btn-auto-sku" class="btn btn-glass btn-xs" title="Auto-generate SKU from name">⚡ Auto SKU</button>
-                  </label>
-                  <input type="text" id="product-sku" class="input-control" required placeholder="e.g. SWB-001">
-                </div>
-                <div class="form-group">
-                  <label for="product-stock">Stock Quantity</label>
-                  <input type="number" id="product-stock" class="input-control" required min="0" placeholder="0">
-                </div>
-                <div class="form-group">
-                  <label for="product-price">Unit Price (ETB)</label>
-                  <input type="number" id="product-price" class="input-control" required min="0" step="0.01" placeholder="0.00">
-                </div>
-                <div class="form-group">
-                  <label for="product-min-stock">Min Stock Alert Level <span class="text-secondary" style="font-size:0.75rem">(reorder point)</span></label>
-                  <input type="number" id="product-min-stock" class="input-control" min="0" value="10" placeholder="10">
-                </div>
-                <div class="flex gap-2">
-                  <button type="submit" id="btn-save-product" class="btn btn-primary" style="flex:1">Save Product</button>
-                  <button type="button" id="btn-cancel-edit" class="btn btn-secondary d-none">Cancel</button>
-                </div>
-              </form>
+        <div id="inventory-alert-container"></div>
+        <div class="card">
+          <div class="flex justify-between align-center flex-wrap gap-2" style="margin-bottom:16px;">
+            <h2 class="card-title" style="margin-bottom:0">Store Stock Levels</h2>
+            <div class="flex gap-2 align-center flex-wrap">
+              <input type="search" id="inventory-search" class="input-control input-sm search-glass" style="max-width:220px;" placeholder="🔍 Search stock...">
+              <button type="button" id="btn-open-product-modal" class="btn btn-primary btn-sm" onclick="openProductModal()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Product
+              </button>
             </div>
           </div>
-          <div>
-            <div id="inventory-alert-container"></div>
-            <div class="card">
-              <div class="flex justify-between align-center" style="margin-bottom:16px;">
-                <h2 class="card-title" style="margin-bottom:0">Store Stock Levels</h2>
-                <div class="flex gap-2 align-center">
-                  <input type="search" id="inventory-search" class="input-control input-sm search-glass" style="max-width:220px;" placeholder="🔍 Search stock...">
-                </div>
-              </div>
-              <div class="table-responsive">
-                <table>
-                  <thead><tr><th>SKU</th><th>Product Name</th><th class="text-right">Price (ETB)</th><th class="text-right">Stock</th><th class="text-right">Min Alert</th><th>Status</th><th class="text-center keeper-only">Actions</th></tr></thead>
-                  <tbody id="inventory-table-body"></tbody>
-                </table>
-              </div>
-            </div>
+          <div class="table-responsive">
+            <table>
+              <thead><tr><th>SKU</th><th>Product Name</th><th class="text-right">Price (ETB)</th><th class="text-right">Stock</th><th class="text-right">Min Alert</th><th>Status</th><th class="text-center">Actions</th></tr></thead>
+              <tbody id="inventory-table-body"></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -605,6 +570,51 @@
   </main>
 </div>
 
+<!-- ADD / EDIT PRODUCT MODAL -->
+<div id="product-modal" class="modal-overlay d-none">
+  <div class="modal-content" style="max-width:460px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <span id="product-form-title">Add New Product</span>
+      </div>
+      <button type="button" class="btn-close" id="btn-close-product-modal" title="Close">&times;</button>
+    </div>
+    <form id="product-form" onsubmit="event.preventDefault()">
+      <input type="hidden" id="product-id">
+      <div class="form-group">
+        <label for="product-name">Product Name</label>
+        <input type="text" id="product-name" class="input-control" required placeholder="e.g. OMO Fast Action Powder 40G">
+      </div>
+      <div class="form-group">
+        <label for="product-sku">
+          SKU / Code
+          <button type="button" id="btn-auto-sku" class="btn btn-glass btn-xs" title="Auto-generate SKU from name">⚡ Auto SKU</button>
+        </label>
+        <input type="text" id="product-sku" class="input-control" required placeholder="e.g. OMO-40G">
+      </div>
+      <div class="dashboard-grid" style="grid-template-columns:1fr 1fr; gap:14px; margin-bottom:0;">
+        <div class="form-group">
+          <label for="product-stock">Stock Quantity</label>
+          <input type="number" id="product-stock" class="input-control" required min="0" placeholder="100">
+        </div>
+        <div class="form-group">
+          <label for="product-price">Unit Price (ETB)</label>
+          <input type="number" id="product-price" class="input-control" required min="0" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="product-min-stock">Min Stock Alert Level <span class="text-secondary" style="font-size:0.75rem">(reorder point)</span></label>
+        <input type="number" id="product-min-stock" class="input-control" min="0" value="10" placeholder="10">
+      </div>
+      <div class="flex gap-2" style="margin-top:8px;">
+        <button type="submit" id="btn-save-product" class="btn btn-primary" style="flex:1">Save Product</button>
+        <button type="button" id="btn-cancel-edit" class="btn btn-secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- RESET STOREKEEPER PASSWORD MODAL -->
 <div id="reset-pass-modal" class="modal-overlay d-none">
   <div class="modal-content" style="max-width:440px;">
@@ -766,6 +776,6 @@
   </div>
 </div>
 
-<script src="app.js?v=2.2"></script>
+<script src="app.js?v=2.3"></script>
 </body>
 </html>
