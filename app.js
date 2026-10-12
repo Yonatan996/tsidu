@@ -253,7 +253,7 @@ function initTheme() {
   const theme = localStorage.getItem('tsidu_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', theme);
   const btn = document.getElementById('btn-theme-toggle');
-  if (btn) btn.innerHTML = theme === 'light' ? '🌙' : '☀️';
+  if (btn) btn.innerHTML = theme === 'light' ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>' : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
 }
 initTheme();
 
@@ -264,7 +264,7 @@ if (btnThemeToggle) {
     const next = current === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('tsidu_theme', next);
-    btnThemeToggle.innerHTML = next === 'light' ? '🌙' : '☀️';
+    btnThemeToggle.innerHTML = next === 'light' ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>' : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
   });
 }
 
@@ -958,7 +958,7 @@ function renderInventory() {
   if (low.length && !query) {
     const alertDiv = document.createElement('div');
     alertDiv.className = 'alert alert-danger';
-    alertDiv.innerHTML = `<strong>⚠️ Low stock alert:</strong> ${low.join(', ')} reached custom reorder point.`;
+    alertDiv.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div><strong>Low stock alert:</strong> ${low.join(', ')} reached custom reorder point.</div>`;
     inventoryAlertContainer.appendChild(alertDiv);
   } 
 }
@@ -1293,7 +1293,7 @@ function renderReturnsPane() {
       </div>
       <div class="flex gap-2">
         <button class="btn btn-secondary btn-sm" style="flex:1" onclick="selectTripForReturn('${trip.id}')">Process Evening Return</button>
-        <button class="btn btn-glass btn-sm" title="Share Morning Dispatch Waybill" onclick="openReceiptModal('${trip.id}', 'waybill')">📲 Share Waybill</button>
+        <button class="btn btn-glass btn-sm" title="Share Morning Dispatch Waybill" onclick="openReceiptModal('${trip.id}', 'waybill')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share Waybill</button>
       </div>
     `;
     activeTripsList.appendChild(card);
@@ -1658,9 +1658,13 @@ function renderHistory() {
       <td>${t.status === 'completed' ? (retDmgStr || '—') : '<span class="text-secondary">—</span>'}</td>
       <td class="text-right"><strong>ETB ${tripRev.toFixed(2)}</strong></td>
       <td>${settlementBadge}</td>
-      <td class="text-center" style="white-space:nowrap">
-        <button class="btn btn-glass btn-xs" title="View & Share Receipt" onclick="openReceiptModal('${t.id}')">📲 Share Receipt</button>
-        ${t.status === 'completed' && balanceDue > 0 ? `<button class="btn btn-primary btn-xs keeper-only" style="margin-left:4px;" title="Settle Driver Payment" onclick="settleTripPayment('${t.id}')">💰 Settle</button>` : ''}
+      <td class="text-center">
+        <div class="action-btn-group">
+          <button type="button" class="btn-icon btn-icon-edit" title="View & Share Receipt" onclick="openReceiptModal('${t.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </button>
+          ${t.status === 'completed' && balanceDue > 0 ? `<button type="button" class="btn-icon btn-icon-settle keeper-only" title="Settle Driver Payment" onclick="settleTripPayment('${t.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></button>` : ''}
+        </div>
       </td>
     `;
     historyTableBody.appendChild(tr);
@@ -2259,7 +2263,7 @@ if (receiptModal) {
 function generateReceiptTextManifest(trip, type = 'settlement') {
   const currentStore = state.stores.find(s => s.id === currentStoreId) || { name: 'Main Depot' };
   const isWaybill = type === 'waybill';
-  let text = `📦 *TSIDU - ${isWaybill ? 'MORNING WAYBILL' : 'SALES SETTLEMENT'}*\n`;
+  let text = `*TSIDU - ${isWaybill ? 'MORNING WAYBILL' : 'SALES SETTLEMENT'}*\n`;
   text += `Depot: ${currentStore.name}\n`;
   text += `Doc: ${trip.id.toUpperCase()} | Date: ${trip.date}\n`;
   text += `Driver: ${trip.driverName}\n`;
@@ -2292,7 +2296,7 @@ if (btnCopyReceiptText) {
     if (!currentReceiptTrip) return;
     const text = generateReceiptTextManifest(currentReceiptTrip, currentReceiptType).replace(/\\n/g, '\n');
     navigator.clipboard.writeText(text).then(() => {
-      alert('✓ Receipt summary copied to clipboard!');
+      alert('Receipt summary copied to clipboard!');
     });
   });
 }

@@ -272,10 +272,13 @@ button, input, select, textarea {
 }
 
 .search-glass {
-  background: var(--glass-input);
+  background-color: var(--glass-input);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
   border: 1px solid var(--border);
   border-radius: 99px;
-  padding-left: 14px;
+  padding-left: 34px;
   transition: all var(--transition);
 }
 
@@ -1944,4 +1947,20 @@ select.input-control option {
 [data-theme="light"] select.input-control option {
   background-color: #ffffff;
   color: #0f172a;
+}
+
+.btn-icon.btn-icon-settle {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.28);
+}
+.btn-icon.btn-icon-settle:hover:not(:disabled) {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+[data-theme="light"] .btn-icon.btn-icon-settle {
+  color: #059669;
 }
