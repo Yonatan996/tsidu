@@ -327,17 +327,17 @@ function saveStateToSheets(ss, state) {
 
   // 3. Human-friendly Tables: Products (includes Min Stock Alert Level)
   var prodSheet = getOrCreateSheet(ss, 'Products');
-  var prodRows = [['Store Name', 'Product ID', 'SKU', 'Product Name', 'Stock Qty', 'Min Alert Qty', 'Unit Price (ETB)']];
+  var prodRows = [['Store Name', 'Product ID', 'SKU', 'Product Name', 'Stock Qty', 'Unit Price (ETB)', 'Total Stock Value (ETB)', 'Min Alert Qty']];
   
   // 4. Human-friendly Tables: Drivers
   var driverSheet = getOrCreateSheet(ss, 'Drivers');
   driverSheet.clear();
-  var driverRows = [['Store Name', 'Driver ID', 'Driver Name', 'Phone']];
+  var driverRows = [['Store Name', 'Sales Person ID', 'Sales Person Name', 'Phone']];
 
   // 5. Human-friendly Tables: Trips (includes Damaged Goods & Settlement Tracking)
   var tripSheet = getOrCreateSheet(ss, 'Trips');
   tripSheet.clear();
-  var tripRows = [['Store Name', 'Trip ID', 'Date', 'Driver Name', 'Status', 'Dispatched Summary', 'Sold Summary', 'Returned Summary', 'Damaged Summary', 'Gross Revenue (ETB)', 'Amount Paid (ETB)', 'Balance Due (ETB)', 'Settlement Status']];
+  var tripRows = [['Store Name', 'Trip ID', 'Date', 'Sales Person Name', 'Status', 'Dispatched Summary', 'Sold Summary', 'Returned Summary', 'Damaged Summary', 'Gross Revenue (ETB)', 'Amount Paid (ETB)', 'Balance Due (ETB)', 'Settlement Status']];
 
   // 6. Human-friendly Tables: Payments (includes Linked Trip ID)
   var paySheet = getOrCreateSheet(ss, 'Payments');
@@ -347,7 +347,7 @@ function saveStateToSheets(ss, state) {
   // 7. Human-friendly Tables: Credit & Receivables Ledger
   var ledgerSheet = getOrCreateSheet(ss, 'Credit_Ledger');
   ledgerSheet.clear();
-  var ledgerRows = [['Store Name', 'Party / Driver', 'Role', 'Total Incurred (ETB)', 'Total Paid (ETB)', 'Balance Due (ETB)', 'Status']];
+  var ledgerRows = [['Store Name', 'Party / Sales Person', 'Role', 'Total Incurred (ETB)', 'Total Paid (ETB)', 'Balance Due (ETB)', 'Status']];
 
   // Populate data per store
   (state.stores || []).forEach(function(store) {
@@ -355,7 +355,7 @@ function saveStateToSheets(ss, state) {
     
     // Products
     (sData.products || []).forEach(function(p) {
-      prodRows.push([store.name, p.id, p.sku, p.name, p.stock, p.minStock || 10, p.price]);
+      prodRows.push([store.name, p.id, p.sku, p.name, p.stock, p.price, ((p.stock || 0) * (p.price || 0)), p.minStock || 10]);
     });
 
     // Drivers

@@ -202,7 +202,7 @@ const SheetsStorage = {
             if (!u || !u.username) return false;
             const role = (u.role || '').toLowerCase();
             const un = u.username.toLowerCase();
-            return (role === 'owner' || role === 'storekeeper') &&
+            return (role === 'owner' || role === 'storekeeper' || role === 'accountant') &&
                    role.indexOf('default_admin') === -1 &&
                    role.indexOf('app_name') === -1 &&
                    role.indexOf('default_currency') === -1 &&
@@ -324,7 +324,7 @@ function loadState() {
       if (!u || !u.username) return false;
       const role = (u.role || '').toLowerCase();
       const un = u.username.toLowerCase();
-      return (role === 'owner' || role === 'storekeeper') &&
+      return (role === 'owner' || role === 'storekeeper' || role === 'accountant') &&
              role.indexOf('default_admin') === -1 &&
              role.indexOf('app_name') === -1 &&
              role.indexOf('default_currency') === -1 &&
@@ -561,22 +561,58 @@ function showAuth() {
 function showDashboard() {
   authSection.classList.add('d-none');
   dashboardSection.classList.remove('d-none');
-  displayUser.textContent = `${currentUser.role === 'owner' ? 'Owner' : 'Keeper'}: ${currentUser.username}`;
+  let roleLabel = 'User';
+  if (currentUser.role === 'owner') roleLabel = 'Owner';
+  else if (currentUser.role === 'accountant') roleLabel = 'Accountant';
+  else if (currentUser.role === 'storekeeper') roleLabel = 'Storekeeper';
+  displayUser.textContent = `${roleLabel}: ${currentUser.username}`;
+
+  // Role-based permissions & tab controls
+  document.body.classList.remove('role-owner', 'role-accountant', 'role-storekeeper');
+  document.body.classList.add(`role-${currentUser.role}`);
+
+  const tabDrivers = document.getElementById('tab-btn-drivers');
+  const tabDispatch = document.getElementById('tab-btn-dispatch');
+  const tabReturns = document.getElementById('tab-btn-returns');
+  const tabPayments = document.getElementById('tab-btn-payments');
+  const tabAdmin = document.getElementById('tab-admin-btn');
 
   if (currentUser.role === 'owner') {
-    document.body.classList.add('role-owner');
-    tabAdminBtn.classList.remove('d-none');
-    headerStoreSelect.classList.remove('d-none');
+    if (tabAdmin) tabAdmin.classList.remove('d-none');
+    if (headerStoreSelect) headerStoreSelect.classList.remove('d-none');
     renderStoreSelector();
     currentStoreId = headerStoreSelect.value;
-  } else {
-    document.body.classList.remove('role-owner');
-    tabAdminBtn.classList.add('d-none');
-    headerStoreSelect.classList.add('d-none');
+    if (tabDrivers) tabDrivers.classList.remove('d-none');
+    if (tabDispatch) tabDispatch.classList.remove('d-none');
+    if (tabReturns) tabReturns.classList.remove('d-none');
+    if (tabPayments) tabPayments.classList.remove('d-none');
+  } else if (currentUser.role === 'accountant') {
+    if (tabAdmin) tabAdmin.classList.add('d-none');
+    if (headerStoreSelect) headerStoreSelect.classList.add('d-none');
     currentStoreId = currentUser.storeId;
-    if (document.querySelector('.tab-btn.active').getAttribute('data-tab') === 'admin') {
-      document.querySelector('.tab-btn[data-tab="overview"]').click();
-    }
+    if (tabDrivers) tabDrivers.classList.add('d-none');
+    if (tabDispatch) tabDispatch.classList.add('d-none');
+    if (tabReturns) tabReturns.classList.add('d-none');
+    if (tabPayments) tabPayments.classList.remove('d-none');
+  } else if (currentUser.role === 'storekeeper') {
+    if (tabAdmin) tabAdmin.classList.add('d-none');
+    if (headerStoreSelect) headerStoreSelect.classList.add('d-none');
+    currentStoreId = currentUser.storeId;
+    if (tabDrivers) tabDrivers.classList.remove('d-none');
+    if (tabDispatch) tabDispatch.classList.remove('d-none');
+    if (tabReturns) tabReturns.classList.remove('d-none');
+    if (tabPayments) tabPayments.classList.add('d-none');
+  }
+
+  // Ensure active tab is allowed for current role
+  const activeBtn = document.querySelector('.tab-btn.active');
+  const activeTab = activeBtn ? activeBtn.getAttribute('data-tab') : 'overview';
+  const disallowedForAccountant = ['drivers', 'dispatch', 'returns', 'admin'];
+  const disallowedForKeeper = ['payments', 'admin'];
+  if (currentUser.role === 'accountant' && disallowedForAccountant.includes(activeTab)) {
+    (document.querySelector('.tab-btn[data-tab="payments"]') || document.querySelector('.tab-btn[data-tab="overview"]'))?.click();
+  } else if (currentUser.role === 'storekeeper' && disallowedForKeeper.includes(activeTab)) {
+    document.querySelector('.tab-btn[data-tab="overview"]')?.click();
   }
 
   if (!currentStoreId && state.stores.length > 0) {
@@ -691,6 +727,7 @@ function renderAll() {
     case 'dispatch': renderDispatchForm(); break; 
     case 'returns': renderReturnsPane(); break; 
     case 'payments': 
+      renderPendingSettlements();
       renderPayments(); 
       renderCreditLedger();
       break; 
@@ -825,14 +862,14 @@ function renderAdmin() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${u.username}</strong></td>
-      <td><span class="badge badge-info">Keeper</span></td>
+      <td><span class="badge ${u.role === 'accountant' ? 'badge-accent' : 'badge-info'}">${(u.role || 'storekeeper').toUpperCase()}</span></td>
       <td>${store ? store.name : 'Unknown'}</td>
       <td class="text-center">
         <div class="action-btn-group">
           <button type="button" class="btn-icon btn-icon-reset" title="Reset Password" onclick="resetUserPassword('${u.username}')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
           </button>
-          <button type="button" class="btn-icon btn-icon-delete" title="Delete Storekeeper" onclick="deleteUser('${u.username}')">
+          <button type="button" class="btn-icon btn-icon-delete" title="Delete User" onclick="deleteUser('${u.username}')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
           </button>
         </div>
@@ -871,12 +908,15 @@ if (userForm) {
     const username = newUserName.value.trim();
     const password = newUserPass.value;
     const storeId = newUserStore.value;
+    const roleSelect = document.getElementById('new-user-role');
+    const role = roleSelect ? roleSelect.value : 'storekeeper';
     if (!username || !password || !storeId) return;
-    if (state.users.some(u => u.username === username)) { alert('Username exists'); return; }
-    state.users.push({ username, password, role: 'storekeeper', storeId });
+    if (state.users.some(u => u.username.toLowerCase() === username.toLowerCase())) { alert('Username already exists'); return; }
+    state.users.push({ username, password, role, storeId });
     saveState(true);
     userForm.reset();
     renderAdmin();
+    alert(`Staff account for ${username} (${role}) created successfully!`);
   });
 }
 
@@ -924,23 +964,45 @@ function renderInventory() {
   const low = [];
   const query = (inventorySearchInput ? inventorySearchInput.value : '').toLowerCase().trim();
 
-  const filtered = sd.products.filter(p => {
+  // Calculate full store totals
+  const allProducts = sd.products || [];
+  const totalValAll = allProducts.reduce((s, p) => s + ((Number(p.stock) || 0) * (Number(p.price) || 0)), 0);
+  const totalUnitsAll = allProducts.reduce((s, p) => s + (Number(p.stock) || 0), 0);
+
+  const stockTotalValEl = document.getElementById('stock-total-value');
+  const stockTotalUnitsEl = document.getElementById('stock-total-units');
+  const stockTotalProdsEl = document.getElementById('stock-total-products');
+  const stockTableTotalValEl = document.getElementById('stock-table-total-value');
+
+  if (stockTotalValEl) stockTotalValEl.textContent = `ETB ${totalValAll.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (stockTotalUnitsEl) stockTotalUnitsEl.textContent = `${totalUnitsAll.toLocaleString()} Units`;
+  if (stockTotalProdsEl) stockTotalProdsEl.textContent = `${allProducts.length} Products`;
+
+  const filtered = allProducts.filter(p => {
     if (!query) return true;
     return p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query);
   });
 
+  let filteredTotalVal = 0;
+
   filtered.forEach(p => { 
     const minThreshold = p.minStock || 10;
     const isLow = p.stock <= minThreshold;
+    const itemStock = Number(p.stock) || 0;
+    const itemPrice = Number(p.price) || 0;
+    const itemTotalVal = itemStock * itemPrice;
+    filteredTotalVal += itemTotalVal;
+
     if (isLow) low.push(`${p.name} (${p.stock}/${minThreshold})`); 
     const tr = document.createElement('tr'); 
     tr.innerHTML = `
       <td><code>${p.sku}</code></td>
       <td><strong>${p.name}</strong></td>
-      <td class="text-right">ETB ${p.price.toFixed(2)}</td>
-      <td class="text-right"><strong>${p.stock}</strong></td>
+      <td class="text-right">ETB ${itemPrice.toFixed(2)}</td>
+      <td class="text-right"><strong>${itemStock}</strong></td>
+      <td class="text-right text-accent font-bold">ETB ${itemTotalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
       <td class="text-right text-secondary">${minThreshold}</td>
-      <td><span class="badge ${isLow ? 'badge-danger' : 'badge-success'}">${isLow ? 'Low Stock (' + p.stock + ')' : 'Healthy'}</span></td>
+      <td><span class="badge ${isLow ? 'badge-danger' : 'badge-success'}">${isLow ? 'Low Stock (' + itemStock + ')' : 'Healthy'}</span></td>
       <td class="text-center">
         <div class="action-btn-group">
           <button type="button" class="btn-icon btn-icon-edit" title="Edit Product" onclick="editProduct('${p.id}')">
@@ -954,6 +1016,10 @@ function renderInventory() {
     `; 
     inventoryTableBody.appendChild(tr); 
   }); 
+
+  if (stockTableTotalValEl) {
+    stockTableTotalValEl.textContent = `ETB ${filteredTotalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
 
   if (low.length && !query) {
     const alertDiv = document.createElement('div');
@@ -1090,11 +1156,11 @@ window.editDriver = function(id) {
   if (!sd) return;
   const d = sd.drivers.find(x => x.id === id);
   if (!d) return;
-  const newName = prompt('Edit driver full name:', d.name);
+  const newName = prompt('Edit sales person full name:', d.name);
   if (newName === null) return;
   const trimmedName = newName.trim();
   if (!trimmedName) return;
-  const newPhone = prompt('Edit driver phone:', d.phone || '');
+  const newPhone = prompt('Edit sales person phone:', d.phone || '');
   if (newPhone === null) return;
   d.name = trimmedName;
   d.phone = newPhone.trim();
@@ -1108,10 +1174,10 @@ window.deleteDriver = function(id) {
   if (!sd) return;
   const active = sd.trips.filter(t => t.driverId === id && t.status === 'active').length;
   if (active) {
-    alert('This driver currently has active dispatches.');
+    alert('This sales person currently has active dispatches.');
     return;
   }
-  if (confirm('Delete driver?')) {
+  if (confirm('Delete sales person?')) {
     sd.drivers = sd.drivers.filter(d => d.id !== id);
     saveState();
     renderDrivers();
@@ -1209,7 +1275,7 @@ if (dispatchForm) {
     if (!sd) return;
     const driverId = dispatchDriverSelect.value;
     const date = dispatchDateInput.value;
-    if (!driverId) { showMsg(dispatchAlert, 'Please select a driver.'); return; }
+    if (!driverId) { showMsg(dispatchAlert, 'Please select a sales person.'); return; }
     const driver = sd.drivers.find(d => d.id === driverId);
     if (!driver) return;
 
@@ -1284,7 +1350,7 @@ function renderReturnsPane() {
 
     card.innerHTML = `
       <div class="flex justify-between align-center" style="margin-bottom:6px;">
-        <strong>Driver: ${trip.driverName}</strong>
+        <strong>Sales Person: ${trip.salesPersonName || trip.driverName}</strong>
         <span class="badge badge-info">${totalItems} units</span>
       </div>
       <div class="flex justify-between align-center text-secondary" style="font-size:0.82rem; margin-bottom:8px;">
@@ -1309,7 +1375,7 @@ window.selectTripForReturn = function(tripId) {
   returnsFallback.classList.add('d-none');
   returnsForm.classList.remove('d-none');
   returnTripIdInput.value = trip.id;
-  returnDriverName.textContent = `Driver: ${trip.driverName}`;
+  returnDriverName.textContent = `Sales Person: ${trip.salesPersonName || trip.driverName}`;
   returnTripDate.textContent = `Dispatch Date: ${trip.date}`;
   returnsItemsList.innerHTML = '';
 
@@ -1492,7 +1558,13 @@ if (returnsForm) {
     returnsForm.classList.add('d-none');
     returnsFallback.classList.remove('d-none');
     
-    // Prompt with settlement receipt preview
+    const tripRev = trip.dispatchData.reduce((sum, d) => {
+      const r = returnData.find(x => x.productId === d.productId) || { sold: 0 };
+      return sum + (r.sold * d.price);
+    }, 0);
+
+    alert(`Returns recorded successfully! Sold items (ETB ${tripRev.toFixed(2)}) sent to the Accountant page for payment collection and settlement.`);
+    renderPendingSettlements();
     openReceiptModal(trip.id, 'settlement');
   });
 }
@@ -2168,8 +2240,8 @@ window.openReceiptModal = function(tripId, forceType = null) {
     <div class="receipt-meta-grid">
       <div class="receipt-meta-item"><strong>Document No:</strong> ${trip.id.toUpperCase()}</div>
       <div class="receipt-meta-item"><strong>Date:</strong> ${trip.date}</div>
-      <div class="receipt-meta-item"><strong>Assigned Driver:</strong> ${trip.driverName}</div>
-      <div class="receipt-meta-item"><strong>Driver Phone:</strong> ${driver.phone || '—'}</div>
+      <div class="receipt-meta-item"><strong>Assigned Sales Person:</strong> ${trip.driverName}</div>
+      <div class="receipt-meta-item"><strong>Sales Person Phone:</strong> ${driver.phone || '—'}</div>
       <div class="receipt-meta-item"><strong>Storekeeper:</strong> ${currentUser ? currentUser.username : 'Staff'}</div>
       <div class="receipt-meta-item"><strong>Status:</strong> ${trip.status === 'active' ? 'On Road (Active)' : 'Completed'}</div>
     </div>
@@ -2234,7 +2306,7 @@ window.openReceiptModal = function(tripId, forceType = null) {
         <div class="receipt-sign-line">Storekeeper Signature & Stamp</div>
       </div>
       <div>
-        <div class="receipt-sign-line">Driver Acknowledgement Signature</div>
+        <div class="receipt-sign-line">Sales Person Acknowledgement Signature</div>
       </div>
     </div>
 
@@ -2266,7 +2338,7 @@ function generateReceiptTextManifest(trip, type = 'settlement') {
   let text = `*TSIDU - ${isWaybill ? 'MORNING WAYBILL' : 'SALES SETTLEMENT'}*\n`;
   text += `Depot: ${currentStore.name}\n`;
   text += `Doc: ${trip.id.toUpperCase()} | Date: ${trip.date}\n`;
-  text += `Driver: ${trip.driverName}\n`;
+  text += `Sales Person: ${trip.salesPersonName || trip.driverName}\n`;
   text += `--------------------------------\n`;
 
   let totalRev = 0;
@@ -2526,3 +2598,257 @@ window.exportLedgerCSV = function() {
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', initAuth);
 
+
+
+// ==================== ACCOUNTANT PENDING SETTLEMENTS & SETTLE MODAL ====================
+
+window.switchPaymentSubtab = function(tab) {
+  const btnPending = document.getElementById('btn-subtab-pending');
+  const btnTx = document.getElementById('btn-subtab-tx');
+  const btnLedger = document.getElementById('btn-subtab-ledger');
+  const panePending = document.getElementById('subtab-pane-pending');
+  const paneTx = document.getElementById('subtab-pane-tx');
+  const paneLedger = document.getElementById('subtab-pane-ledger');
+
+  [btnPending, btnTx, btnLedger].forEach(b => b?.classList.remove('active'));
+  [panePending, paneTx, paneLedger].forEach(p => p?.classList.add('d-none'));
+
+  if (tab === 'pending') {
+    btnPending?.classList.add('active');
+    panePending?.classList.remove('d-none');
+    renderPendingSettlements();
+  } else if (tab === 'ledger') {
+    btnLedger?.classList.add('active');
+    paneLedger?.classList.remove('d-none');
+    renderCreditLedger();
+  } else {
+    btnTx?.classList.add('active');
+    paneTx?.classList.remove('d-none');
+    renderPayments();
+  }
+};
+
+function renderPendingSettlements() {
+  const sd = getStoreData();
+  const tbody = document.getElementById('pending-settlements-table-body');
+  const badgeEl = document.getElementById('pending-settlements-badge');
+  const tripsCountEl = document.getElementById('accountant-pending-trips-count');
+  const revCountEl = document.getElementById('accountant-pending-revenue');
+  const settledTotalEl = document.getElementById('accountant-settled-total');
+  const searchInput = document.getElementById('pending-settlements-search');
+
+  if (!sd || !tbody) return;
+
+  const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+
+  let pendingCount = 0;
+  let totalPendingRevenue = 0;
+  let totalSettledRevenue = 0;
+
+  const completedTrips = (sd.trips || []).filter(t => t.status === 'completed');
+  const pendingTripsData = [];
+
+  completedTrips.forEach(t => {
+    const spName = t.salesPersonName || t.driverName || 'Sales Person';
+    const rev = (t.dispatchData || []).reduce((sum, d) => {
+      const r = (t.returnData || []).find(x => x.productId === d.productId) || { sold: 0 };
+      return sum + (r.sold * (d.price || 0));
+    }, 0);
+
+    const paid = (sd.payments || [])
+      .filter(p => p.tripId === t.id || (p.note && p.note.includes(t.id)))
+      .reduce((sum, p) => sum + (p.type === 'credit' ? 0 : (p.amount || 0)), 0);
+
+    const bal = Math.max(0, rev - paid);
+
+    if (bal > 0) {
+      pendingCount++;
+      totalPendingRevenue += bal;
+      pendingTripsData.push({ trip: t, spName, rev, paid, bal });
+    } else {
+      totalSettledRevenue += rev;
+    }
+  });
+
+  if (badgeEl) {
+    badgeEl.textContent = pendingCount;
+    badgeEl.className = `badge ${pendingCount > 0 ? 'badge-warning' : 'badge-success'}`;
+  }
+  if (tripsCountEl) tripsCountEl.textContent = `${pendingCount}`;
+  if (revCountEl) revCountEl.textContent = `ETB ${totalPendingRevenue.toFixed(2)}`;
+  if (settledTotalEl) settledTotalEl.textContent = `ETB ${totalSettledRevenue.toFixed(2)}`;
+
+  tbody.innerHTML = '';
+
+  const filtered = pendingTripsData.filter(item => {
+    if (!query) return true;
+    return item.spName.toLowerCase().includes(query) || item.trip.id.toLowerCase().includes(query);
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-secondary" style="padding:28px;">
+      ${query ? 'No matching pending settlements found.' : '✓ All completed sales dispatches have been collected & settled! No pending payments.'}
+    </td></tr>`;
+    return;
+  }
+
+  filtered.forEach(({ trip, spName, rev, paid, bal }) => {
+    const soldItems = (trip.returnData || [])
+      .filter(r => r.sold > 0)
+      .map(r => {
+        const prod = (sd.products || []).find(p => p.id === r.productId);
+        const name = prod ? prod.name : r.productId;
+        return `${r.sold}x ${name}`;
+      })
+      .join(', ');
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${trip.date}</td>
+      <td><strong>${spName}</strong></td>
+      <td style="max-width:240px; font-size:0.82rem;" title="${soldItems}">
+        ${soldItems || '<span class="text-secondary">No items sold</span>'}
+      </td>
+      <td class="text-right"><strong>ETB ${rev.toFixed(2)}</strong></td>
+      <td class="text-right text-secondary">ETB ${paid.toFixed(2)}</td>
+      <td class="text-right text-accent font-bold">ETB ${bal.toFixed(2)}</td>
+      <td>
+        <span class="badge ${paid > 0 ? 'badge-warning' : 'badge-danger'}">
+          ${paid > 0 ? 'Partial (-' + bal.toFixed(0) + ')' : 'Awaiting Collection'}
+        </span>
+      </td>
+      <td class="text-center">
+        <button type="button" class="btn btn-primary btn-sm" onclick="openSettlePaymentModal('${trip.id}')" style="white-space:nowrap; padding:4px 10px; font-size:0.78rem;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Collect & Settle
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+const pendingSettlementsSearchInput = document.getElementById('pending-settlements-search');
+if (pendingSettlementsSearchInput) {
+  pendingSettlementsSearchInput.addEventListener('input', () => renderPendingSettlements());
+}
+
+window.openSettlePaymentModal = function(tripId) {
+  const sd = getStoreData();
+  if (!sd) return;
+  const trip = sd.trips.find(t => t.id === tripId);
+  if (!trip) return;
+
+  const spName = trip.salesPersonName || trip.driverName || 'Sales Person';
+  const rev = (trip.dispatchData || []).reduce((sum, d) => {
+    const r = (trip.returnData || []).find(x => x.productId === d.productId) || { sold: 0 };
+    return sum + (r.sold * (d.price || 0));
+  }, 0);
+
+  const paid = (sd.payments || [])
+    .filter(p => p.tripId === trip.id || (p.note && p.note.includes(trip.id)))
+    .reduce((sum, p) => sum + (p.type === 'credit' ? 0 : (p.amount || 0)), 0);
+
+  const bal = Math.max(0, rev - paid);
+
+  document.getElementById('settle-modal-trip-id').value = trip.id;
+  document.getElementById('settle-modal-salesperson').textContent = spName;
+  document.getElementById('settle-modal-date').textContent = `Route Date: ${trip.date} • Trip #${trip.id}`;
+  document.getElementById('settle-modal-total-rev').textContent = `ETB ${rev.toFixed(2)}`;
+  document.getElementById('settle-modal-already-paid').textContent = `ETB ${paid.toFixed(2)}`;
+  document.getElementById('settle-modal-balance-due').textContent = `ETB ${bal.toFixed(2)}`;
+  document.getElementById('settle-modal-amount').value = bal.toFixed(2);
+  document.getElementById('settle-modal-amount').max = bal.toFixed(2);
+  document.getElementById('settle-modal-pay-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('settle-modal-note').value = `Settlement for route ${trip.id}`;
+
+  const statusBadge = document.getElementById('settle-modal-status-badge');
+  if (statusBadge) {
+    statusBadge.textContent = paid > 0 ? 'Partial Payment' : 'Awaiting Collection';
+    statusBadge.className = `badge ${paid > 0 ? 'badge-warning' : 'badge-danger'}`;
+  }
+
+  // Sold items list breakdown
+  const breakdownEl = document.getElementById('settle-modal-items-breakdown');
+  if (breakdownEl) {
+    const soldRows = (trip.returnData || [])
+      .filter(r => r.sold > 0)
+      .map(r => {
+        const d = (trip.dispatchData || []).find(x => x.productId === r.productId) || {};
+        const pName = d.productName || r.productId;
+        const price = d.price || 0;
+        const lineTotal = r.sold * price;
+        return `
+          <div class="settle-item-row">
+            <div>
+              <strong>${r.sold}x ${pName}</strong>
+              <div class="text-secondary" style="font-size:0.75rem;">@ ETB ${price.toFixed(2)}</div>
+            </div>
+            <strong class="text-accent">ETB ${lineTotal.toFixed(2)}</strong>
+          </div>
+        `;
+      });
+    breakdownEl.innerHTML = soldRows.length > 0 ? soldRows.join('') : '<div class="text-secondary">No sold items recorded.</div>';
+  }
+
+  const modal = document.getElementById('settle-payment-modal');
+  if (modal) modal.classList.remove('d-none');
+};
+
+window.closeSettlePaymentModal = function() {
+  const modal = document.getElementById('settle-payment-modal');
+  if (modal) modal.classList.add('d-none');
+};
+
+const btnCloseSettleModal = document.getElementById('btn-close-settle-modal');
+const btnCancelSettleModal = document.getElementById('btn-cancel-settle-modal');
+if (btnCloseSettleModal) btnCloseSettleModal.addEventListener('click', window.closeSettlePaymentModal);
+if (btnCancelSettleModal) btnCancelSettleModal.addEventListener('click', window.closeSettlePaymentModal);
+
+const settleModalForm = document.getElementById('settle-modal-form');
+if (settleModalForm) {
+  settleModalForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const sd = getStoreData();
+    if (!sd) return;
+
+    const tripId = document.getElementById('settle-modal-trip-id').value;
+    const trip = sd.trips.find(t => t.id === tripId);
+    if (!trip) return;
+
+    const date = document.getElementById('settle-modal-pay-date').value;
+    const type = document.getElementById('settle-modal-pay-type').value;
+    const amount = parseFloat(document.getElementById('settle-modal-amount').value) || 0;
+    const note = document.getElementById('settle-modal-note').value.trim();
+    const party = trip.salesPersonName || trip.driverName || 'Sales Person';
+
+    if (!date || amount <= 0) {
+      alert('Please enter a valid payment amount.');
+      return;
+    }
+
+    // Add payment linked to this trip
+    sd.payments.push({
+      id: 'pay_' + Date.now(),
+      date,
+      party,
+      type,
+      amount,
+      tripId: trip.id,
+      note: note || `Payment collection for route ${trip.id}`
+    });
+
+    saveState();
+    window.closeSettlePaymentModal();
+    renderPendingSettlements();
+    renderPayments();
+    renderCreditLedger();
+    renderOverview();
+    renderHistory();
+
+    alert(`Payment of ETB ${amount.toFixed(2)} recorded successfully for ${party}!`);
+
+    // Prompt with settlement receipt preview
+    openReceiptModal(trip.id, 'settlement');
+  });
+}

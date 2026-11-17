@@ -1023,15 +1023,27 @@ td code {
 
 .fade-in { animation: fadeIn 0.25s ease-out; }
 
-/* ===== OWNER ROLE TWEAKS ===== */
-body.role-owner .keeper-only {
+/* ===== ROLE PERMISSION TWEAKS ===== */
+body.role-accountant .keeper-only {
+  display: none !important;
+}
+body.role-storekeeper .accountant-only {
   display: none !important;
 }
 
-@media (min-width: 1024px) {
-  body.role-owner .dashboard-grid.two-col {
-    grid-template-columns: 1fr;
-  }
+/* Settle Modal item breakdown */
+.settle-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.settle-item-row:last-child {
+  border-bottom: none;
+}
+[data-theme="light"] .settle-item-row {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
 }
 
 /* ===== SUB-TABS (PAYMENTS / CREDIT LEDGER) ===== */
